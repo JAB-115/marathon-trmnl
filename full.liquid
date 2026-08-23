@@ -129,6 +129,36 @@
 </svg>
 {%- endcapture -%}
 
+{%- capture icon_wind -%}
+<svg viewBox="0 0 24 24" width="28" height="28">
+  <rect x="2.6" y="2.4" width="2.4" height="19.2" rx="1.2" fill="black"/>
+  <path d="M6.8 5.0 L21.2 8.6 L21.2 13.0 L6.8 16.6 Z" fill="black"/>
+  <rect x="11.2" y="3" width="1.9" height="18" fill="white"/>
+  <rect x="16.2" y="3" width="1.7" height="18" fill="white"/>
+</svg>
+{%- endcapture -%}
+{%- capture icon_rain -%}
+<svg viewBox="0 0 24 24" width="28" height="28">
+  <g fill="black">
+    <circle cx="8" cy="11" r="4"/><circle cx="13" cy="8.6" r="5"/>
+    <circle cx="17.6" cy="11.4" r="3.6"/><rect x="8" y="11" width="9.6" height="4"/>
+  </g>
+  <g stroke="black" stroke-width="2" stroke-linecap="round">
+    <path d="M8 17.6 L6.9 20.8"/><path d="M12.2 17.6 L11.1 20.8"/><path d="M16.4 17.6 L15.3 20.8"/>
+  </g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_uv -%}
+<svg viewBox="0 0 24 24" width="28" height="28">
+  <circle cx="12" cy="12" r="5" fill="black"/>
+  <g stroke="black" stroke-width="2" stroke-linecap="round">
+    <path d="M12 4.4 V1.6"/><path d="M12 19.6 V22.4"/><path d="M19.6 12 H22.4"/><path d="M4.4 12 H1.6"/>
+    <path d="M17.4 6.6 L19.4 4.6"/><path d="M6.6 17.4 L4.6 19.4"/>
+    <path d="M17.4 17.4 L19.4 19.4"/><path d="M6.6 6.6 L4.6 4.6"/>
+  </g>
+</svg>
+{%- endcapture -%}
+
 <div class="layout layout--col gap--space-between">
 
   <div class="flex flex--col gap--none">
@@ -206,16 +236,17 @@
     <div class="col--span-5">
       {% if has_wx %}
         <div class="flex flex--col gap--none">
-          <span class="label label--small text--uppercase text--gray-30">Now &middot; {{ now_hhmm }}</span>
-          <div class="flex flex--row gap--small flex--bottom">
+          <span class="label label--small text--uppercase text--gray-30">{{ now_hhmm }}</span>
+          <div class="flex flex--row gap--small flex--center-y">
             <span class="value value--xxlarge value--tnums">{{ now_temp | round }}&deg;</span>
-            <div class="flex flex--col gap--none">
-              <span class="label label--small">{{ now_wind | round }} km/h</span>
-              <span class="label label--small">{{ now_precip }} mm</span>
-              {% if now_uv %}<span class="label label--small">UV {{ now_uv | round }}</span>{% endif %}
+            <div class="flex flex--row gap--small flex--center-y">
+              {% if now_wind >= 25 %}{{ icon_wind }}{% endif %}
+              {% if now_precip >= 1.5 %}{{ icon_rain }}{% endif %}
+              {% if now_uv %}{% if now_uv >= 3 %}{{ icon_uv }}{% endif %}{% endif %}
             </div>
           </div>
-          <span class="label label--xsmall text--gray-30">Light {{ sunrise_t }} to {{ sunset_t }}</span>
+          <span class="label label--small text--gray-30 mt--2">Light {{ sunrise_t }} to {{ sunset_t }}</span>
+          <span class="label label--small text--gray-30">{{ now_wind | round }} km/h &middot; {{ now_precip }} mm{% if now_uv %} &middot; UV {{ now_uv | round }}{% endif %}</span>
         </div>
       {% else %}
         <span class="label label--small text--gray-30">No forecast. Kit shown is the default.</span>
