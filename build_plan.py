@@ -197,24 +197,27 @@ def shoe(day, dow, stype):
 
 def pace_for(stype, hero):
     h = hero.lower()
-    if "race day" in h:            return "MP 5:55/km \u00b7 first 10km must feel embarrassingly easy"
-    if "run south london" in h:    return "Target sub 1:58 \u00b7 5:35/km"
-    if "parkrun" in h:             return "Target 27:00-28:00 \u00b7 about 5:30/km"
-    if "time trial" in h:          return "Target 54-57 min \u00b7 about 5:30/km"
-    if "shakeout" in h:            return "8:00/km \u00b7 loosen up, nothing more"
-    if "recovery" in h:            return "7:30-8:00/km \u00b7 HR under 150"
+    if "race day" in h:            return "MP 5:55/km \u00b7 Zone 3 \u00b7 first 10km must feel easy"
+    if "run south london" in h:    return "Target sub 1:58 \u00b7 5:35/km \u00b7 Zone 3-4"
+    if "parkrun" in h:             return "Target 27:00-28:00 \u00b7 Zone 4"
+    if "time trial" in h:          return "Target 54-57 min \u00b7 Zone 4"
+    if "shakeout" in h:            return "8:00/km \u00b7 Zone 1-2 \u00b7 loosen up only"
+    if "recovery" in h:            return "7:30-8:00/km \u00b7 Zone 1-2"
     if "at mp" in h or "marathon pace" in h:
-        if stype == "long":        return "7:00-7:45/km, MP segment 5:55/km"
-        if stype == "easy":        return "7:15-8:00/km, MP bursts 5:55/km"
-        return "5:55/km (MP) \u00b7 HR 165-172"
-    if "threshold" in h:           return "6:15-6:30/km \u00b7 HR 170-178"
-    if "5k effort" in h:           return "5:55-6:10/km \u00b7 hard but repeatable"
+        if stype == "long":        return "7:00-7:45/km Zone 2, MP segment 5:55/km Zone 3"
+        if stype == "easy":        return "7:15-8:00/km Zone 2, MP bursts 5:55/km"
+        return "5:55/km (MP) \u00b7 Zone 3 low"
+    if "threshold" in h:           return "6:15-6:30/km \u00b7 Zone 3 top"
+    if "5k effort" in h:           return "5:55-6:10/km \u00b7 Zone 4"
     if "fartlek" in h:             return "Brisk 6:00/km, jog 7:30/km"
     if "steady" in h:
-        if stype == "long":        return "7:00-7:45/km, steady close 6:30-6:45/km"
-        return "6:30-6:45/km \u00b7 HR under 170"
-    if stype == "long":            return "7:00-7:45/km \u00b7 HR under 162"
-    return "7:15-8:00/km \u00b7 HR under 160"
+        if stype == "long":        return "7:00-7:45/km Zone 2, close 6:30-6:45/km"
+        return "6:30-6:45/km \u00b7 Zone 3 low"
+    if stype == "long":            return "7:00-7:45/km \u00b7 Zone 2"
+    return "7:15-8:00/km \u00b7 Zone 2"
+
+
+MINS_PER_KM = {"easy": 7.6, "long": 7.4, "quality": 6.6, "optional": 7.8, "race": 5.7}
 
 
 def phase_for(day):
@@ -241,9 +244,12 @@ for w in range(1, 37):
         if dow in planned:
             _, stype, kit, hero, detail, km = planned[dow]
             h, disp = run_hour(day, dow, stype)
+            mins = int(round(km * MINS_PER_KM.get(stype, 7.4)))
             rec.update({"type": stype, "kit": kit, "hero": hero, "km": km,
-                        "pace": pace_for(stype, hero),
+                        "mins": mins, "pace": pace_for(stype, hero),
                         "hour": h, "at": disp, "shoe": shoe(day, dow, stype)})
+            if w >= 21 and mins >= 90:
+                rec["fuel"] = True
             if detail:
                 rec["note"] = detail
         elif w == 4:
@@ -287,9 +293,9 @@ kit = {
     {"band":"damp_cold","kit":"quality","lines":["+ light gloves, headband. Keep short sleeves","Underdress. It comes right by rep three"]},
     {"band":"mild","kit":"easy","lines":["Default kit. No changes"]},
     {"band":"mild","kit":"quality","lines":["Default kit. No changes"]},
-    {"band":"warm","kit":"easy","lines":["+ cap, sunglasses. Carry fluid over 75 min"]},
+    {"band":"warm","kit":"easy","lines":["+ cap, sunglasses"]},
     {"band":"warm","kit":"quality","lines":["Swap tee for singlet. + cap, sunglasses"]},
-    {"band":"hot","kit":"easy","lines":["Swap tee for singlet. + cap, sunglasses","Anti-chafe balm. Carry fluid"]},
+    {"band":"hot","kit":"easy","lines":["Swap tee for singlet. + cap, sunglasses","Anti-chafe balm"]},
     {"band":"hot","kit":"quality","lines":["Singlet, split shorts. + cap, sunglasses","Anti-chafe balm. Rehearse race-day heat"]}
   ],
   "max_lines": 4,
@@ -300,7 +306,9 @@ kit = {
     "any_rain_long": "+ anti-chafe balm",
     "wind": "+ windproof",
     "dark": "+ headtorch, reflective vest",
-    "ice": "Trail shoes or move indoors"
+    "ice": "Trail shoes or move indoors",
+    "fluid": "Carry fluid",
+    "fuel": "Gels: 1 every 30 min"
   }
 }
 
