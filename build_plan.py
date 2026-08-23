@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""Build today.json for the TRMNL 'Today' screen from the 36-week plan.
+
+Design rule: precompute anything date-derived here, so the Liquid template
+does one lookup and no arithmetic. A plan revision changes data only.
+"""
+import json, datetime as dt
+
+D = dt.date
+def d(s): return D.fromisoformat(s)
+
+RACE = d("2027-04-25")
+W1 = d("2026-08-17")
+
+CHECKPOINTS = [
+    {"date": "2026-10-10", "short": "parkrun",  "name": "parkrun 5K time trial", "target": "27:00-28:00"},
+    {"date": "2026-12-19", "short": "10K TT",   "name": "10K time trial",        "target": "54-57 min"},
+    {"date": "2027-03-14", "short": "RSL half", "name": "Run South London Half", "target": "sub 1:58"},
+    {"date": "2027-04-25", "short": "RACE DAY", "name": "London Marathon",       "target": "sub 4:00"},
+]
+
+PHASES = [
+    {"id": "rebuild",  "name": "Rebuild",        "start": "2026-08-17", "end": "2026-10-25", "weeks": [1, 10]},
+    {"id": "half",     "name": "Half build",     "start": "2026-10-26", "end": "2027-01-03", "weeks": [11, 20]},
+    {"id": "marathon", "name": "Marathon block", "start": "2027-01-04", "end": "2027-04-25", "weeks": [21, 36]},
+]
+
+# week -> (runs, strength, spin, demand string)
+DEMAND = {}
+for w in range(1, 37):
+    if w in (2, 3, 5, 11, 12, 19):  DEMAND[w] = (2, 1, 0, "2 runs")
+    elif w == 4:                    DEMAND[w] = (0, 0, 0, "holiday, walk lots")
+    elif w <= 6:                    DEMAND[w] = (3, 1, 1, "3 runs + 1 strength")
+    elif w <= 12:                   DEMAND[w] = (3, 2, 1, "3 runs + 2 strength")
+    elif w <= 20:                   DEMAND[w] = (3, 2, 1, "3 runs + 2 strength")
+    elif w <= 33:                   DEMAND[w] = (4, 2, 1, "4 runs + 2 strength")
+    else:                           DEMAND[w] = (4, 1, 1, "4 runs + 1 strength")
+DEMAND[36] = (4, 0, 0, "taper, then race")
+
+# Sessions: week -> list of (weekday 0=Mon, type, kit_class, hero, detail, km)
+# type: easy | quality | long | race | strength | spin | rest | optional
+S = {
+ 1:  [(1,"easy","easy","Easy 4km · HR under 160","Gentle restart",4),
+      (3,"easy","easy","Easy 5km · HR under 160","",5),
+      (6,"long","easy","Long 7km easy","Relaxed, full sentences",7)],
+ 2:  [(1,"easy","easy","Easy 5km · HR under 160","",5),
+      (2,"easy","easy","Easy 4km · HR under 160","Away from Thursday",4)],
+ 3:  [(2,"easy","easy","Easy 5km · HR under 160","Back from Tuesday",5),
+      (4,"easy","easy","Easy 4km + 4 strides","",4),
+      (6,"long","easy","Long 8km easy","",8)],
+ 4:  [],
+ 5:  [(3,"easy","easy","Easy 4km · HR under 160","Back Wednesday",4),
+      (5,"easy","easy","Easy 5km + 4 strides","",5),
+      (6,"long","easy","Long 8km relaxed","",8)],
+ 6:  [(1,"easy","easy","Easy 6km + 6 strides","Consistency starts here",6),
+      (3,"easy","easy","Easy 6km · HR under 160","",6),
+      (6,"long","easy","Long 10km easy","",10)],
+ 7:  [(1,"quality","quality","Fartlek 8 x 1 min brisk / 1 min jog","",8),
+      (3,"easy","easy","Easy 6km · HR under 160","",6),
+      (6,"long","easy","Long 11km easy","",11)],
+ 8:  [(1,"quality","quality","Fartlek 6 x 90 sec / 90 sec","",7),
+      (3,"easy","easy","Easy 5km · HR under 160","",5),
+      (5,"race","quality","parkrun 5K time trial","Checkpoint 1. Target 27:00-28:00",5),
+      (6,"long","easy","Long 8km relaxed","Legs will be tired. Go slow",8)],
+ 9:  [(1,"quality","quality","Threshold 3 x 5 min, 2 min jog","Recalculate paces from parkrun",8),
+      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (6,"long","easy","Long 12km easy","",12)],
+ 10: [(1,"quality","quality","Threshold 4 x 5 min, 2 min jog","",9),
+      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (6,"long","easy","Long 13km easy","End of rebuild",13)],
+ 11: [(1,"quality","quality","Threshold 20 min continuous","",8),
+      (2,"easy","easy","Easy 6km · HR under 160","Away from Friday",6)],
+ 12: [(3,"easy","easy","Easy 6km · HR under 160","Back Wednesday",6),
+      (4,"easy","easy","Easy 5km + 4 strides","",5),
+      (6,"long","easy","Long 13km easy","",13)],
+ 13: [(1,"quality","quality","Threshold 3 x 8 min, 2 min jog","",9),
+      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (5,"optional","easy","Optional easy 5km","Only if the body feels good",5),
+      (6,"long","easy","Long 14km easy","",14)],
+ 14: [(1,"quality","quality","Threshold 25 min continuous","",9),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 15km easy","",15)],
+ 15: [(1,"quality","quality","5 x 1km at 5K effort, 2.5 min jog","",10),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 16km, last 3km steady","",16)],
+ 16: [(1,"quality","quality","Threshold 2 x 12 min","",9),
+      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (6,"long","easy","Long 11km cutback","Absorb the work",11)],
+ 17: [(1,"quality","quality","Threshold 30 min continuous","",10),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 17km easy","Biggest half-build week",17)],
+ 18: [(1,"quality","quality","4 x 3 min at 5K effort","",8),
+      (3,"easy","easy","Easy 5km + 4 strides","",5),
+      (5,"race","quality","10K time trial or festive 10K","Checkpoint 2. Target 54-57 min",10)],
+ 19: [(1,"easy","easy","Easy 7km relaxed","Away from Wednesday",7)],
+ 20: [(1,"easy","easy","Easy 6km · HR under 160","",6),
+      (3,"easy","easy","Easy 7km + 4 strides","",7),
+      (6,"long","easy","Long 14km easy","Ready for the block",14)],
+ 21: [(1,"quality","quality","Threshold 3 x 10 min","",10),
+      (3,"easy","easy","Easy 7km + 4 strides","",7),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 17km easy","Gels from now: 1 every 30 min",17)],
+ 22: [(1,"quality","quality","6 x 1km at 5K effort","",11),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 19km easy","",19)],
+ 23: [(1,"quality","quality","Threshold 30 min continuous","",10),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 21km, last 3km at MP","",21)],
+ 24: [(1,"quality","quality","5 x 4 min at 5K effort","",9),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 15km cutback","Easier week",15)],
+ 25: [(1,"quality","quality","Threshold 2 x 15 min","",10),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 23km easy","",23)],
+ 26: [(1,"quality","quality","Steady 40 min","",8),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 17km with 5km at MP","Slight cutback",17)],
+ 27: [(1,"quality","quality","Threshold 3 x 10 min","",10),
+      (3,"easy","easy","Easy 8km + 4 strides","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 25km easy","",25)],
+ 28: [(1,"quality","quality","30 min at marathon pace","",9),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 27km easy","Last big one before the race",27)],
+ 29: [(1,"quality","quality","4 x 2 min at 5K effort","Light week, freshen up",6),
+      (3,"easy","easy","Easy 5km + 4 strides","",5),
+      (6,"long","easy","Long 12km relaxed","Pre-race week",12)],
+ 30: [(1,"quality","quality","20 min with 10 min at MP","",6),
+      (3,"easy","easy","Easy 5km + 4 strides","",5),
+      (6,"race","quality","RACE: Run South London Half","Checkpoint 3. Sets your marathon goal",21)],
+ 31: [(1,"easy","easy","Recovery 8km very easy","Nothing hard before Thursday",8),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","easy","Long 26km relaxed","",26)],
+ 32: [(1,"quality","quality","2 x 20 min at marathon pace","",10),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","quality","Long 30-32km or 3:30, whichever first","Dress rehearsal: kit, breakfast, gels",31)],
+ 33: [(1,"quality","quality","30 min at marathon pace","",9),
+      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (5,"optional","easy","Optional easy 5km","",5),
+      (6,"long","quality","Long 24km with 10km at MP","Last big one. Strength to maintenance",24)],
+ 34: [(1,"quality","quality","3 x 8 min at marathon pace","Taper begins",9),
+      (3,"easy","easy","Easy 7km + 4 strides","",7),
+      (6,"long","easy","Long 18km easy","~70% volume",18)],
+ 35: [(1,"quality","quality","2 x 10 min at marathon pace","",8),
+      (3,"easy","easy","Easy 6km + 4 strides","",6),
+      (6,"long","quality","Long 13km with 3km at MP","~50% volume. Sleep is training now",13)],
+ 36: [(1,"quality","quality","Easy 6km with 4 x 1 min at MP","",6),
+      (3,"easy","easy","Easy 5km + 4 strides","",5),
+      (4,"easy","easy","Shakeout 20 min jog","Lay out kit, pin number, sort gels",3),
+      (6,"race","quality","RACE DAY: London Marathon","First 10km should feel embarrassingly easy",42)],
+}
+
+# Non-run defaults by weekday
+NONRUN = {
+    0: ("rest",     "Rest · or yoga, reformer or recovery class", ""),
+    2: ("strength", "Strength · gym session or Tempo class",      "Glutes & Legs or Conditioning fine midweek"),
+    4: ("spin",     "Indoor cycling · easy to moderate",          "Do not chase the leaderboard"),
+    5: ("strength", "Strength · Tempo class",                     "Core & Upper is safest before a long run"),
+}
+
+RACE_SHOE_DATES = {"2027-03-14", "2027-03-28", "2027-04-04", "2027-04-18", "2027-04-25"}
+
+def run_hour(day, dow, stype):
+    ds = day.isoformat()
+    if stype == "race":
+        return (9, "09:00") if ds != "2027-04-25" else (10, "10:00")
+    if dow == 6:
+        return (9, "09:30")
+    if dow == 5:
+        return (11, "11:00")
+    if stype == "quality" and d("2026-10-25") <= day <= d("2027-03-27"):
+        return (12, "12:30")
+    return (18, "18:00")
+
+def shoe(day, dow, stype):
+    ds = day.isoformat()
+    if ds in RACE_SHOE_DATES:
+        return "race_shoe"
+    if stype == "long":
+        return "triumph_23"
+    if stype == "optional":
+        return "triumph_20"
+    if "Recovery" in ds:
+        return "triumph_20"
+    return "novablast_5"
+
+def phase_for(day):
+    for p in PHASES:
+        if d(p["start"]) <= day <= d(p["end"]):
+            return p["id"]
+    return PHASES[0]["id"]
+
+def next_cp(day):
+    for c in CHECKPOINTS:
+        cd = d(c["date"])
+        if cd >= day:
+            return c["short"], (cd - day).days
+    return "", 0
+
+days = []
+for w in range(1, 37):
+    monday = W1 + dt.timedelta(days=(w - 1) * 7)
+    planned = {s[0]: s for s in S[w]}
+    for dow in range(7):
+        day = monday + dt.timedelta(days=dow)
+        cp_short, cp_days = next_cp(day)
+        rec = {"date": day.isoformat(), "week": w}
+        if dow in planned:
+            _, stype, kit, hero, detail, km = planned[dow]
+            h, disp = run_hour(day, dow, stype)
+            rec.update({"type": stype, "kit": kit, "hero": hero, "km": km,
+                        "hour": h, "at": disp, "shoe": shoe(day, dow, stype)})
+            if detail:
+                rec["note"] = detail
+        elif w == 4:
+            rec.update({"type": "rest", "hero": "Holiday · walk lots, jog only if it appeals"})
+        elif day.isoformat() == "2027-04-24":
+            rec.update({"type": "rest", "hero": "Busy today, which is fine",
+                        "note": "Off your feet, sip water, eat carbs, early dinner"})
+        else:
+            t, hero, detail = NONRUN.get(dow, ("rest", "Rest day", ""))
+            rec.update({"type": t, "hero": hero})
+            if detail:
+                rec["note"] = detail
+        rec["cp"] = cp_short
+        rec["cpd"] = cp_days
+        days.append(rec)
+
+weeks = []
+for w in range(1, 37):
+    monday = W1 + dt.timedelta(days=(w - 1) * 7)
+    runs, strength, spin, demand = DEMAND[w]
+    weeks.append({"n": w, "start": monday.isoformat(), "phase": phase_for(monday),
+                  "runs": runs, "strength": strength, "spin": spin, "demand": demand})
+
+kit = {
+  "defaults": {"easy": "Tee, 2-in-1 shorts, cushioned socks",
+               "quality": "Tee, half tights, everyday socks"},
+  "bands": [
+    {"id": "raw",       "max": 2,   "label": "Raw"},
+    {"id": "cold",      "max": 6,   "label": "Cold"},
+    {"id": "damp_cold", "max": 10,  "label": "Damp cold"},
+    {"id": "mild",      "max": 15,  "label": "Mild"},
+    {"id": "warm",      "max": 20,  "label": "Warm"},
+    {"id": "hot",       "max": 99,  "label": "Hot"}
+  ],
+  "deltas": [
+    {"band":"raw","kit":"easy","lines":["+ thermal base, windproof jacket, thermal tights","+ beanie, buff, thermal gloves, warm socks"]},
+    {"band":"raw","kit":"quality","lines":["+ thermal base, gilet. Swap to full tights","+ headband, buff, thermal gloves"]},
+    {"band":"cold","kit":"easy","lines":["+ long-sleeve, windproof jacket, full tights","+ beanie or headband, light gloves, warm socks"]},
+    {"band":"cold","kit":"quality","lines":["+ long-sleeve base. Swap to full tights","+ headband, light gloves"]},
+    {"band":"damp_cold","kit":"easy","lines":["Swap tee for long-sleeve, shorts for full tights","+ light gloves"]},
+    {"band":"damp_cold","kit":"quality","lines":["+ light gloves, headband. Keep short sleeves","Underdress. It comes right by rep three"]},
+    {"band":"mild","kit":"easy","lines":["Default kit. No changes"]},
+    {"band":"mild","kit":"quality","lines":["Default kit. No changes"]},
+    {"band":"warm","kit":"easy","lines":["+ cap, sunglasses. Carry fluid over 75 min"]},
+    {"band":"warm","kit":"quality","lines":["Swap tee for singlet. + cap, sunglasses"]},
+    {"band":"hot","kit":"easy","lines":["Swap tee for singlet. + cap, sunglasses","Anti-chafe balm. Carry fluid"]},
+    {"band":"hot","kit":"quality","lines":["Singlet, split shorts. + cap, sunglasses","Anti-chafe balm. Rehearse race-day heat"]}
+  ],
+  "max_lines": 4,
+  "mod_cap": 3,
+  "modifiers": {
+    "light_rain": "+ cap",
+    "heavy_rain": "+ cap, waterproof jacket",
+    "any_rain_long": "+ anti-chafe balm",
+    "wind": "+ windproof",
+    "dark": "+ headtorch, reflective vest",
+    "ice": "Trail shoes or move indoors"
+  }
+}
+
+shoes = [
+  {"id":"novablast_5","name":"Novablast 5","short":"Novablast","km":146,"retire":625,"role":"Daily + threshold","target":0.40},
+  {"id":"triumph_23","name":"Triumph 23","short":"Triumph 23","km":149,"retire":625,"role":"Long run","target":0.35},
+  {"id":"triumph_20","name":"Triumph 20","short":"Triumph 20","km":536,"retire":625,"role":"Recovery / wet","target":0.20},
+  {"id":"race_shoe","name":"TBC","short":"Race shoe","km":0,"retire":250,"role":"Race, buy early Feb","target":0.05},
+  {"id":"parkclaw_g280","name":"Parkclaw G280","short":"Trail","km":0,"retire":625,"role":"Ice / wet ground","target":0.00}
+]
+
+payload = {
+  "meta": {"version": "3.0", "generated": dt.date.today().isoformat(),
+           "race": {"name": "London Marathon", "date": RACE.isoformat()},
+           "mp_provisional": "5:55/km", "easy_hr_cap": 160},
+  "phases": PHASES, "checkpoints": CHECKPOINTS,
+  "weeks": weeks, "days": days, "kit": kit, "shoes": shoes
+}
+
+out = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+open("/home/claude/plan/today.json", "w").write(out)
+pretty = json.dumps(payload, ensure_ascii=False, indent=2)
+open("/home/claude/plan/today.pretty.json", "w").write(pretty)
+print("days:", len(days))
+print("minified bytes:", len(out.encode()), "=", round(len(out.encode())/1024, 1), "kB")
+print("pretty bytes:", len(pretty.encode()), "=", round(len(pretty.encode())/1024, 1), "kB")
