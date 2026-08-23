@@ -12,9 +12,12 @@
 {%- assign wk = plan.weeks | where: "n", day.week | first -%}
 {%- assign hr = day.hour | default: now_h -%}
 
+{%- comment -%} ---- DONE: plan.completed is a list of ISO dates, written by the Strava job ---- {%- endcomment -%}
+{%- assign is_done = false -%}
+{%- if plan.completed contains today -%}{%- assign is_done = true -%}{%- endif -%}
+
 {%- comment -%} ---- WEATHER: hourly index == hour of day when timezone is set.
-     Display and band come from the current hour. Modifiers come from the run hour,
-     because whether it is dark or wet at 18:00 does not change at 14:00. ---- {%- endcomment -%}
+     Display and band come from the current hour. Modifiers come from the run hour. ---- {%- endcomment -%}
 {%- assign has_wx = false -%}
 {%- if wx.hourly.temperature_2m -%}{%- assign has_wx = true -%}{%- endif -%}
 {%- if has_wx -%}
@@ -31,7 +34,7 @@
   {%- assign sunset_h = sunset_t | split: ":" | first | times: 1 -%}
 {%- endif -%}
 
-{%- comment -%} ---- BAND from current temperature. Bands already include the +8 running adjustment ---- {%- endcomment -%}
+{%- comment -%} ---- BAND from current temperature ---- {%- endcomment -%}
 {%- assign eff = now_temp -%}
 {%- if has_wx and now_wind >= 25 -%}
   {%- assign eff = now_temp | minus: 4 -%}
@@ -78,7 +81,7 @@
 {%- assign slots = max_lines | minus: shown_mods -%}
 {%- if slots < 1 -%}{%- assign slots = 1 -%}{%- endif -%}
 
-{%- comment -%} ---- FLUID AND FUEL: own line, only when the session warrants it ---- {%- endcomment -%}
+{%- comment -%} ---- FLUID AND FUEL ---- {%- endcomment -%}
 {%- assign supply = "" -%}
 {%- if day.mins >= 75 -%}
   {%- if band == "warm" or band == "hot" -%}
@@ -93,14 +96,14 @@
   {%- endif -%}
 {%- endif -%}
 
-{%- comment -%} ---- ICE: replaces the shoe rather than appending ---- {%- endcomment -%}
+{%- comment -%} ---- ICE ---- {%- endcomment -%}
 {%- assign ice = false -%}
 {%- if has_wx and run_temp < 2 and run_precip > 0 -%}{%- assign ice = true -%}{%- endif -%}
 {%- assign shoe_id = day.shoe -%}
 {%- if ice -%}{%- assign shoe_id = "parkclaw_g280" -%}{%- endif -%}
 {%- assign shoe = plan.shoes | where: "id", shoe_id | first -%}
 
-{%- comment -%} ---- NEXT RUN: for strength, spin and rest days ---- {%- endcomment -%}
+{%- comment -%} ---- NEXT RUN ---- {%- endcomment -%}
 {%- assign seen = false -%}
 {%- assign found = false -%}
 {%- for dd in plan.days -%}
@@ -114,24 +117,15 @@
 {%- assign next_shoe = plan.shoes | where: "id", next_run.shoe | first -%}
 
 {%- capture icon_run -%}
-<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="black" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="16.3" cy="3.8" r="2.8" fill="black" stroke="none"/>
-  <path d="M13.1 7.7 L8.7 12.4"/>
-  <path d="M13.9 8.4 L21.5 10.2"/>
-  <path d="M12.2 6.8 L8.2 3.3 L4.7 8.9"/>
-  <path d="M8.7 12.4 L13.5 13.9 L10.1 19.5"/>
-  <path d="M8.7 12.4 L6.2 15.3 L2.7 21.1"/>
-</svg>
+<img class="image" width="34" height="33" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAhAQAAAACUqETBAAAAjklEQVR42gXBsVECURgGwH0fDBI4gg3IlWFgAB3YCw2Q2YplvLERTyMCA8bonLm5391W/t5OYeri2yg+ES6D6O+0avfnk3pYVU+1hSy7Ip4cmZ85WiakTRvi1i5HNe6qx7gnhoEwEq9X4mcm9buw9njGfGjVMx82ZFq25PayJy4D+Vp38rGCu6rq2UL28A/kGTLVTjnfvQAAAABJRU5ErkJggg==" />
 {%- endcapture -%}
 {%- capture icon_shoe -%}
-<svg viewBox="0 0 26 24" width="24" height="22" fill="none" stroke="black" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M2.6 9.2 H5.6"/>
-  <path d="M1.1 13.6 H3.6"/>
-  <path d="M2.6 18.1 H6.1"/>
-  <path d="M8.6 19.5 L12.3 9.5 C12.6 8.7 13.5 8.6 14 9.3 L15.3 11.3 C16.1 12.5 17.5 12.8 18.6 12 L20.1 10.9 L22.3 15.3 C22.8 16.3 23.7 16.9 24.7 16.9"/>
-  <path d="M9.1 19.6 H24.8"/>
-  <path d="M16.7 12.7 L18.5 13.9"/>
-  <path d="M18.1 15.1 L19.9 16.2"/>
+<img class="image" width="46" height="31" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAfAQAAAACw5MKSAAAAqklEQVR42gXBMU5CURCG0e+OU1gY360NUWLtAiiIbIcFSGKHy7CzcR3mNezC4kEoKMfYXGRyf89BfSul0UfAyAlA5w8pjQZgWJzAiMU3OMe7x8QOOdyC8XWzBvSuUKKZJqVpjr9Bn6mt0vqJBuSoy0PioT4kvlgl6X+12Dj3sqE8R9GBe3aovW51LPHE1bT3+G1QvdbPDkX8UEFqS0Dqg8KgvBB0ADcArv8B7pxWwJlFAYMAAAAASUVORK5CYII=" />
+{%- endcapture -%}
+{%- capture tickbox -%}
+<svg viewBox="0 0 60 60" width="60" height="60" fill="none">
+  <rect x="3" y="3" width="54" height="54" rx="12" stroke="black" stroke-width="3"/>
+  {% if is_done %}<path d="M16 31 L26 41 L45 20" stroke="black" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>{% endif %}
 </svg>
 {%- endcapture -%}
 
@@ -147,17 +141,22 @@
     <div class="border--h"></div>
   </div>
 
-  <div class="flex flex--col gap--none">
-    {% if day %}
-      <span class="title title--xxlarge" data-fit-value="true">{{ day.hero }}</span>
-      {% if day.pace %}<span class="title title--medium text--gray-30">{{ day.pace }}</span>{% endif %}
-      {% if day.note %}<span class="description description--small text--gray-30">{{ day.note }}</span>{% endif %}
-    {% elsif plan.days %}
-      <span class="title title--large">Nothing scheduled today</span>
-      <span class="description description--small">The plan feed has no entry for {{ today }}</span>
-    {% else %}
-      <span class="title title--large">Waiting for the plan feed</span>
-      <span class="description description--small">IDX_0 is empty. Check the polling URLs.</span>
+  <div class="flex flex--row gap--medium flex--center-y">
+    <div class="flex flex--col gap--none grow">
+      {% if day %}
+        <span class="title title--xxlarge" data-fit-value="true">{{ day.hero }}</span>
+        {% if day.pace %}<span class="title title--medium text--gray-30 mt--3">{{ day.pace }}</span>{% endif %}
+        {% if day.note %}<span class="description description--small text--gray-30 mt--1">{{ day.note }}</span>{% endif %}
+      {% elsif plan.days %}
+        <span class="title title--large">Nothing scheduled today</span>
+        <span class="description description--small">The plan feed has no entry for {{ today }}</span>
+      {% else %}
+        <span class="title title--large">Waiting for the plan feed</span>
+        <span class="description description--small">IDX_0 is empty. Check the polling URLs.</span>
+      {% endif %}
+    </div>
+    {% if day.type and day.type != "rest" %}
+      <div class="no-shrink">{{ tickbox }}</div>
     {% endif %}
   </div>
 
