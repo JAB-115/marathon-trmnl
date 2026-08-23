@@ -40,63 +40,63 @@ DEMAND[36] = (4, 0, 0, "taper, then race")
 # Sessions: week -> list of (weekday 0=Mon, type, kit_class, hero, detail, km)
 # type: easy | quality | long | race | strength | spin | rest | optional
 S = {
- 1:  [(1,"easy","easy","Easy 4km · HR under 160","Gentle restart",4),
-      (3,"easy","easy","Easy 5km · HR under 160","",5),
+ 1:  [(1,"easy","easy","Easy 4km","Gentle restart",4),
+      (3,"easy","easy","Easy 5km","",5),
       (6,"long","easy","Long 7km easy","Relaxed, full sentences",7)],
- 2:  [(1,"easy","easy","Easy 5km · HR under 160","",5),
-      (2,"easy","easy","Easy 4km · HR under 160","Away from Thursday",4)],
- 3:  [(2,"easy","easy","Easy 5km · HR under 160","Back from Tuesday",5),
+ 2:  [(1,"easy","easy","Easy 5km","",5),
+      (2,"easy","easy","Easy 4km","Away from Thursday",4)],
+ 3:  [(2,"easy","easy","Easy 5km","Back from Tuesday",5),
       (4,"easy","easy","Easy 4km + 4 strides","",4),
       (6,"long","easy","Long 8km easy","",8)],
  4:  [],
- 5:  [(3,"easy","easy","Easy 4km · HR under 160","Back Wednesday",4),
+ 5:  [(3,"easy","easy","Easy 4km","Back Wednesday",4),
       (5,"easy","easy","Easy 5km + 4 strides","",5),
       (6,"long","easy","Long 8km relaxed","",8)],
  6:  [(1,"easy","easy","Easy 6km + 6 strides","Consistency starts here",6),
-      (3,"easy","easy","Easy 6km · HR under 160","",6),
+      (3,"easy","easy","Easy 6km","",6),
       (6,"long","easy","Long 10km easy","",10)],
  7:  [(1,"quality","quality","Fartlek 8 x 1 min brisk / 1 min jog","",8),
-      (3,"easy","easy","Easy 6km · HR under 160","",6),
+      (3,"easy","easy","Easy 6km","",6),
       (6,"long","easy","Long 11km easy","",11)],
  8:  [(1,"quality","quality","Fartlek 6 x 90 sec / 90 sec","",7),
-      (3,"easy","easy","Easy 5km · HR under 160","",5),
+      (3,"easy","easy","Easy 5km","",5),
       (5,"race","quality","parkrun 5K time trial","Checkpoint 1. Target 27:00-28:00",5),
       (6,"long","easy","Long 8km relaxed","Legs will be tired. Go slow",8)],
  9:  [(1,"quality","quality","Threshold 3 x 5 min, 2 min jog","Recalculate paces from parkrun",8),
-      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (3,"easy","easy","Easy 7km","",7),
       (6,"long","easy","Long 12km easy","",12)],
  10: [(1,"quality","quality","Threshold 4 x 5 min, 2 min jog","",9),
-      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (3,"easy","easy","Easy 7km","",7),
       (6,"long","easy","Long 13km easy","End of rebuild",13)],
  11: [(1,"quality","quality","Threshold 20 min continuous","",8),
-      (2,"easy","easy","Easy 6km · HR under 160","Away from Friday",6)],
- 12: [(3,"easy","easy","Easy 6km · HR under 160","Back Wednesday",6),
+      (2,"easy","easy","Easy 6km","Away from Friday",6)],
+ 12: [(3,"easy","easy","Easy 6km","Back Wednesday",6),
       (4,"easy","easy","Easy 5km + 4 strides","",5),
       (6,"long","easy","Long 13km easy","",13)],
  13: [(1,"quality","quality","Threshold 3 x 8 min, 2 min jog","",9),
-      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (3,"easy","easy","Easy 7km","",7),
       (5,"optional","easy","Optional easy 5km","Only if the body feels good",5),
       (6,"long","easy","Long 14km easy","",14)],
  14: [(1,"quality","quality","Threshold 25 min continuous","",9),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 15km easy","",15)],
  15: [(1,"quality","quality","5 x 1km at 5K effort, 2.5 min jog","",10),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 16km, last 3km steady","",16)],
  16: [(1,"quality","quality","Threshold 2 x 12 min","",9),
-      (3,"easy","easy","Easy 7km · HR under 160","",7),
+      (3,"easy","easy","Easy 7km","",7),
       (6,"long","easy","Long 11km cutback","Absorb the work",11)],
  17: [(1,"quality","quality","Threshold 30 min continuous","",10),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 17km easy","Biggest half-build week",17)],
  18: [(1,"quality","quality","4 x 3 min at 5K effort","",8),
       (3,"easy","easy","Easy 5km + 4 strides","",5),
       (5,"race","quality","10K time trial or festive 10K","Checkpoint 2. Target 54-57 min",10)],
  19: [(1,"easy","easy","Easy 7km relaxed","Away from Wednesday",7)],
- 20: [(1,"easy","easy","Easy 6km · HR under 160","",6),
+ 20: [(1,"easy","easy","Easy 6km","",6),
       (3,"easy","easy","Easy 7km + 4 strides","",7),
       (6,"long","easy","Long 14km easy","Ready for the block",14)],
  21: [(1,"quality","quality","Threshold 3 x 10 min","",10),
@@ -104,23 +104,23 @@ S = {
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 17km easy","Gels from now: 1 every 30 min",17)],
  22: [(1,"quality","quality","6 x 1km at 5K effort","",11),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 19km easy","",19)],
  23: [(1,"quality","quality","Threshold 30 min continuous","",10),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 21km, last 3km at MP","",21)],
  24: [(1,"quality","quality","5 x 4 min at 5K effort","",9),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 15km cutback","Easier week",15)],
  25: [(1,"quality","quality","Threshold 2 x 15 min","",10),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 23km easy","",23)],
  26: [(1,"quality","quality","Steady 40 min","",8),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 17km with 5km at MP","Slight cutback",17)],
  27: [(1,"quality","quality","Threshold 3 x 10 min","",10),
@@ -128,7 +128,7 @@ S = {
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 25km easy","",25)],
  28: [(1,"quality","quality","30 min at marathon pace","",9),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 27km easy","Last big one before the race",27)],
  29: [(1,"quality","quality","4 x 2 min at 5K effort","Light week, freshen up",6),
@@ -138,15 +138,15 @@ S = {
       (3,"easy","easy","Easy 5km + 4 strides","",5),
       (6,"race","quality","RACE: Run South London Half","Checkpoint 3. Sets your marathon goal",21)],
  31: [(1,"easy","easy","Recovery 8km very easy","Nothing hard before Thursday",8),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","easy","Long 26km relaxed","",26)],
  32: [(1,"quality","quality","2 x 20 min at marathon pace","",10),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","quality","Long 30-32km or 3:30, whichever first","Dress rehearsal: kit, breakfast, gels",31)],
  33: [(1,"quality","quality","30 min at marathon pace","",9),
-      (3,"easy","easy","Easy 8km · HR under 160","",8),
+      (3,"easy","easy","Easy 8km","",8),
       (5,"optional","easy","Optional easy 5km","",5),
       (6,"long","quality","Long 24km with 10km at MP","Last big one. Strength to maintenance",24)],
  34: [(1,"quality","quality","3 x 8 min at marathon pace","Taper begins",9),
@@ -195,6 +195,28 @@ def shoe(day, dow, stype):
         return "triumph_20"
     return "novablast_5"
 
+def pace_for(stype, hero):
+    h = hero.lower()
+    if "race day" in h:            return "MP 5:55/km \u00b7 first 10km must feel embarrassingly easy"
+    if "run south london" in h:    return "Target sub 1:58 \u00b7 5:35/km"
+    if "parkrun" in h:             return "Target 27:00-28:00 \u00b7 about 5:30/km"
+    if "time trial" in h:          return "Target 54-57 min \u00b7 about 5:30/km"
+    if "shakeout" in h:            return "8:00/km \u00b7 loosen up, nothing more"
+    if "recovery" in h:            return "7:30-8:00/km \u00b7 HR under 150"
+    if "at mp" in h or "marathon pace" in h:
+        if stype == "long":        return "7:00-7:45/km, MP segment 5:55/km"
+        if stype == "easy":        return "7:15-8:00/km, MP bursts 5:55/km"
+        return "5:55/km (MP) \u00b7 HR 165-172"
+    if "threshold" in h:           return "6:15-6:30/km \u00b7 HR 170-178"
+    if "5k effort" in h:           return "5:55-6:10/km \u00b7 hard but repeatable"
+    if "fartlek" in h:             return "Brisk 6:00/km, jog 7:30/km"
+    if "steady" in h:
+        if stype == "long":        return "7:00-7:45/km, steady close 6:30-6:45/km"
+        return "6:30-6:45/km \u00b7 HR under 170"
+    if stype == "long":            return "7:00-7:45/km \u00b7 HR under 162"
+    return "7:15-8:00/km \u00b7 HR under 160"
+
+
 def phase_for(day):
     for p in PHASES:
         if d(p["start"]) <= day <= d(p["end"]):
@@ -220,6 +242,7 @@ for w in range(1, 37):
             _, stype, kit, hero, detail, km = planned[dow]
             h, disp = run_hour(day, dow, stype)
             rec.update({"type": stype, "kit": kit, "hero": hero, "km": km,
+                        "pace": pace_for(stype, hero),
                         "hour": h, "at": disp, "shoe": shoe(day, dow, stype)})
             if detail:
                 rec["note"] = detail

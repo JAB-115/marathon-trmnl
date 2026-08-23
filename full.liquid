@@ -1,5 +1,7 @@
-{%- comment -%} ---- CLOCK: TRMNL system time, always present, never fails ---- {%- endcomment -%}
-{%- assign today = trmnl.system.timestamp_utc | plus: trmnl.user.utc_offset | date: "%Y-%m-%d" -%}
+{%- comment -%} ---- CLOCK ---- {%- endcomment -%}
+{%- assign local = trmnl.system.timestamp_utc | plus: trmnl.user.utc_offset -%}
+{%- assign today = local | date: "%Y-%m-%d" -%}
+{%- assign now_h = local | date: "%H" | times: 1 -%}
 
 {%- comment -%} ---- SOURCES: IDX_0 = plan, IDX_1 = Open-Meteo. Order is frozen. ---- {%- endcomment -%}
 {%- assign plan = IDX_0 -%}
@@ -7,12 +9,17 @@
 
 {%- assign day = plan.days | where: "date", today | first -%}
 {%- assign wk = plan.weeks | where: "n", day.week | first -%}
-{%- assign hr = day.hour | default: 18 -%}
+{%- assign hr = day.hour | default: now_h -%}
 
-{%- comment -%} ---- WEATHER: hourly index == hour of day when timezone is set ---- {%- endcomment -%}
+{%- comment -%} ---- WEATHER: hourly index == hour of day when timezone is set.
+     Current hour drives the display, run hour drives the kit. ---- {%- endcomment -%}
 {%- assign has_wx = false -%}
 {%- if wx.hourly.temperature_2m -%}{%- assign has_wx = true -%}{%- endif -%}
 {%- if has_wx -%}
+  {%- assign now_temp = wx.hourly.temperature_2m[now_h] -%}
+  {%- assign now_wind = wx.hourly.wind_speed_10m[now_h] -%}
+  {%- assign now_precip = wx.hourly.precipitation[now_h] -%}
+  {%- assign now_uv = wx.hourly.uv_index[now_h] -%}
   {%- assign temp = wx.hourly.temperature_2m[hr] -%}
   {%- assign precip = wx.hourly.precipitation[hr] -%}
   {%- assign wind = wx.hourly.wind_speed_10m[hr] -%}
@@ -42,7 +49,7 @@
 {%- assign band_deltas = plan.kit.deltas | where: "band", band -%}
 {%- assign delta = band_deltas | where: "kit", day.kit | first -%}
 
-{%- comment -%} ---- MODIFIERS: each is a short appended line ---- {%- endcomment -%}
+{%- comment -%} ---- MODIFIERS ---- {%- endcomment -%}
 {%- assign mods = "" -%}
 {%- if has_wx -%}
   {%- if hr >= sunset_h or hr <= sunrise_h -%}
@@ -53,7 +60,6 @@
   {%- elsif precip >= 0.2 -%}
     {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.light_rain -%}
   {%- endif -%}
-  {%- comment -%} Skip the windproof line when the base kit already names one {%- endcomment -%}
   {%- assign base_text = delta.lines | join: " " -%}
   {%- unless base_text contains "windproof" -%}
     {%- if windy -%}
@@ -64,7 +70,6 @@
     {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.any_rain_long -%}
   {%- endif -%}
 {%- endif -%}
-{%- comment -%} Appended in priority order: dark, rain, wind, balm. The cap drops from the tail, so safety lines survive. {%- endcomment -%}
 {%- assign modlist = mods | remove_first: "|" | split: "|" -%}
 {%- assign mod_cap = plan.kit.mod_cap | default: 3 -%}
 {%- assign max_lines = plan.kit.max_lines | default: 4 -%}
@@ -73,14 +78,14 @@
 {%- assign slots = max_lines | minus: shown_mods -%}
 {%- if slots < 1 -%}{%- assign slots = 1 -%}{%- endif -%}
 
-{%- comment -%} ---- ICE: replaces the shoe line rather than appending ---- {%- endcomment -%}
+{%- comment -%} ---- ICE: replaces the shoe rather than appending ---- {%- endcomment -%}
 {%- assign ice = false -%}
 {%- if has_wx and temp < 2 and precip > 0 -%}{%- assign ice = true -%}{%- endif -%}
 {%- assign shoe_id = day.shoe -%}
 {%- if ice -%}{%- assign shoe_id = "parkclaw_g280" -%}{%- endif -%}
 {%- assign shoe = plan.shoes | where: "id", shoe_id | first -%}
 
-{%- comment -%} ---- NEXT RUN: for strength, spin and rest days. No string date maths ---- {%- endcomment -%}
+{%- comment -%} ---- NEXT RUN: for strength, spin and rest days ---- {%- endcomment -%}
 {%- assign seen = false -%}
 {%- assign found = false -%}
 {%- for dd in plan.days -%}
@@ -93,14 +98,38 @@
 {%- endfor -%}
 {%- assign next_shoe = plan.shoes | where: "id", next_run.shoe | first -%}
 
+{%- capture icon_run -%}
+<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="16.5" cy="4" r="2.4" fill="black" stroke="none"/>
+  <path d="M15.5 7.5 L11.5 12.5"/>
+  <path d="M15 9 L19.5 10.5 L18.5 14"/>
+  <path d="M14 9.5 L9.5 8"/>
+  <path d="M11.5 12.5 L14.5 16 L13 21"/>
+  <path d="M11.5 12.5 L6.5 14.5 L4.5 19"/>
+</svg>
+{%- endcapture -%}
+{%- capture icon_shoe -%}
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M2 18 V12.5 h3.5 l2.5-3 3 2.5 4.5 1.2 5 2 1.5 1.6 V18 z"/>
+  <path d="M8 12.5 l2.2 1.6"/>
+  <path d="M11.5 13.4 l2.2 1.5"/>
+</svg>
+{%- endcapture -%}
+
 <div class="layout layout--col gap--space-between">
 
   <div class="flex flex--col gap--none">
-    <span class="label label--small text--uppercase text--gray-30">
-      {{ today | date: "%A %-d %B" }}{% if wk %} &middot; Week {{ wk.n }} of 36{% endif %}
-    </span>
+    <div class="flex flex--row gap--small flex--center-y">
+      {{ icon_run }}
+      <span class="label label--small text--uppercase text--gray-30">
+        {{ today | date: "%A" }}{% if wk %} &middot; Week {{ wk.n }} of 36{% endif %}
+      </span>
+    </div>
+    <div class="border--h mt--1 mb--2"></div>
+
     {% if day %}
-      <span class="title title--large" data-fit-value="true">{{ day.hero }}</span>
+      <span class="title title--xxlarge" data-fit-value="true">{{ day.hero }}</span>
+      {% if day.pace %}<span class="title title--medium text--gray-30">{{ day.pace }}</span>{% endif %}
       {% if day.note %}<span class="description description--small text--gray-30">{{ day.note }}</span>{% endif %}
     {% elsif plan.days %}
       <span class="title title--large">Nothing scheduled today</span>
@@ -116,9 +145,7 @@
     <div class="col--span-7">
       {% if day.kit %}
         <div class="flex flex--col gap--none">
-          <span class="label label--small text--uppercase text--gray-30">
-            Kit{% if band_label %} &middot; {{ band_label }}{% endif %}{% if day.at %} &middot; {{ day.at }}{% endif %}
-          </span>
+          {% if band_label %}<span class="title title--medium">{{ band_label }}</span>{% endif %}
           {% if delta %}
             {% for line in delta.lines limit: slots %}
               <span class="title title--small">{{ line }}</span>
@@ -131,19 +158,24 @@
           {% for m in modlist limit: mod_cap %}
             <span class="title title--small">{{ m }}</span>
           {% endfor %}
-          <div class="flex flex--row gap--small pt--1">
+          <div class="flex flex--row gap--small flex--center-y pt--2">
+            {{ icon_shoe }}
             {% if ice %}
-              <span class="label label--filled">{{ plan.kit.modifiers.ice }}</span>
+              <span class="title title--small">{{ plan.kit.modifiers.ice }}</span>
             {% else %}
-              <span class="label label--outline">{{ shoe.short }}</span>
+              <span class="title title--small">{{ shoe.short }}</span>
             {% endif %}
           </div>
         </div>
       {% elsif found %}
         <div class="flex flex--col gap--none">
-          <span class="label label--small text--uppercase text--gray-30">Next run</span>
+          <span class="title title--medium">Next run</span>
           <span class="title title--small">{{ next_run.date | date: "%a" }} &middot; {{ next_run.hero }}</span>
-          <span class="label label--small text--gray-30">{{ next_run.at }} &middot; {{ next_shoe.short }}</span>
+          <span class="label label--small text--gray-30">{{ next_run.at }} &middot; {{ next_run.pace }}</span>
+          <div class="flex flex--row gap--small flex--center-y pt--2">
+            {{ icon_shoe }}
+            <span class="title title--small">{{ next_shoe.short }}</span>
+          </div>
         </div>
       {% endif %}
     </div>
@@ -152,12 +184,16 @@
       {% if has_wx %}
         <div class="flex flex--col gap--none">
           <div class="flex flex--row gap--small flex--bottom">
-            <span class="value value--xlarge value--tnums">{{ temp | round }}&deg;</span>
+            <span class="value value--xxlarge value--tnums">{{ now_temp | round }}&deg;</span>
             <div class="flex flex--col gap--none">
-              <span class="label label--small">{{ wind | round }} km/h</span>
-              <span class="label label--small">{{ precip }} mm</span>
+              <span class="label label--small">{{ now_wind | round }} km/h</span>
+              <span class="label label--small">{{ now_precip }} mm</span>
+              {% if now_uv %}<span class="label label--small">UV {{ now_uv | round }}</span>{% endif %}
             </div>
           </div>
+          {% if day.at and hr != now_h %}
+            <span class="label label--small">{{ day.at }} &middot; {{ temp | round }}&deg; &middot; {{ wind | round }} km/h</span>
+          {% endif %}
           <span class="label label--xsmall text--gray-30">Light {{ sunrise_t }} to {{ sunset_t }}</span>
         </div>
       {% else %}
