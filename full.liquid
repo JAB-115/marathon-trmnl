@@ -205,79 +205,57 @@
         {{ today | date: "%A" }}{% if wk %} &middot; Week {{ wk.n }} of 36{% endif %}
       </span>
     </div>
-    <div class="border--h"></div>
-  </div>
+    <div class="border--h mb--2"></div>
 
-  <div class="flex flex--row gap--medium flex--center-y">
-    <div class="flex flex--col gap--none grow">
-      {% if day %}
-        <span class="title title--xxlarge" data-fit-value="true">{{ day.hero }}</span>
-        {% if day.pace %}<span class="title title--medium text--gray-30 mt--3">{{ day.pace }}</span>{% endif %}
-        {% if day.note %}<span class="description description--small text--gray-30 mt--1">{{ day.note }}</span>{% endif %}
-      {% elsif plan.days %}
-        <span class="title title--large">Nothing scheduled today</span>
-        <span class="description description--small">The plan feed has no entry for {{ today }}</span>
-      {% else %}
-        <span class="title title--large">Waiting for the plan feed</span>
-        <span class="description description--small">IDX_0 is empty. Check the polling URLs.</span>
+    <div class="flex flex--row gap--medium flex--center-y">
+      <div class="flex flex--col gap--none grow">
+        {% if day %}
+          <span class="title title--xxlarge" data-fit-value="true">{{ day.hero }}</span>
+          {% if day.pace %}<span class="title title--medium text--gray-30 mt--2">{{ day.pace }}</span>{% endif %}
+          {% if day.note %}<span class="description description--small text--gray-30">{{ day.note }}</span>{% endif %}
+        {% elsif plan.days %}
+          <span class="title title--large">Nothing scheduled today</span>
+          <span class="description description--small">The plan feed has no entry for {{ today }}</span>
+        {% else %}
+          <span class="title title--large">Waiting for the plan feed</span>
+          <span class="description description--small">IDX_0 is empty. Check the polling URLs.</span>
+        {% endif %}
+      </div>
+      {% if day.type and day.type != "rest" %}
+        <div class="no-shrink">{{ tickbox }}</div>
       {% endif %}
     </div>
-    {% if day.type and day.type != "rest" %}
-      <div class="no-shrink">{{ tickbox }}</div>
-    {% endif %}
   </div>
 
   <div class="grid">
-
-    <div class="col--span-7">
+    <div class="col--span-8">
       {% if day.kit %}
-        <div class="flex flex--col gap--none">
+        <div class="flex flex--col gap--small">
           {% if band_label %}<span class="title title--large">{{ band_label }}</span>{% endif %}
-          <span class="title title--small">{{ top_line }}</span>
-          <span class="title title--small">{{ bot_line }}</span>
-          <span class="title title--small">{{ acc_line }}</span>
-          <div class="flex flex--row gap--small flex--center-y pt--2">
-            {{ icon_shoe }}
-            {% if is_ice %}
-              <span class="title title--small">{{ plan.kit.modifiers.ice }}</span>
-            {% else %}
-              <span class="title title--small">{{ shoe.short }}</span>
-            {% endif %}
-          </div>
-          {% if day.fuel or need_fluid or is_dark %}
-            <div class="flex flex--row gap--medium flex--center-y pt--1">
-              {% if day.fuel %}<div class="flex flex--row gap--small flex--center-y">{{ icon_gel }}<span class="label label--small">{{ plan.kit.modifiers.fuel }}</span></div>{% endif %}
-              {% if need_fluid %}<div class="flex flex--row gap--small flex--center-y">{{ icon_bottle }}<span class="label label--small">{{ plan.kit.modifiers.fluid }}</span></div>{% endif %}
-              {% if is_dark %}<div class="flex flex--row gap--small flex--center-y">{{ icon_hivis }}<span class="label label--small">{{ plan.kit.modifiers.dark }}</span></div>{% endif %}
-            </div>
-          {% endif %}
+          <span class="title title--base">{{ top_line }}</span>
+          <span class="title title--base">{{ bot_line }}</span>
+          <span class="title title--base">{{ acc_line }}</span>
         </div>
       {% elsif found %}
-        <div class="flex flex--col gap--none">
+        <div class="flex flex--col gap--small">
           <span class="title title--large">Next run</span>
-          <span class="title title--small">{{ next_run.date | date: "%a" }} &middot; {{ next_run.hero }}</span>
-          <span class="label label--small text--gray-30">{{ next_run.at }} &middot; {{ next_run.pace }}</span>
-          <div class="flex flex--row gap--small flex--center-y pt--2">
-            {{ icon_shoe }}
-            <span class="title title--small">{{ next_shoe.short }}</span>
-          </div>
+          <span class="title title--base">{{ next_run.date | date: "%a" }} &middot; {{ next_run.hero }}</span>
+          <span class="label label--small text--gray-30">{{ next_run.at }} &middot; {{ next_run.pace }} &middot; {{ next_shoe.short }}</span>
         </div>
       {% endif %}
     </div>
 
-    <div class="col--span-5">
+    <div class="col--span-4">
       {% if has_wx %}
         <div class="flex flex--col gap--none">
           <span class="label label--small text--uppercase text--gray-30">{{ now_hhmm }}</span>
-          <div class="flex flex--row gap--small flex--center-y">
+          <div class="flex flex--row gap--small flex--center-y flex--wrap">
             <span class="value value--xxlarge value--tnums">{{ now_temp | round }}&deg;</span>
-            <div class="flex flex--row gap--small flex--center-y flex--wrap">
-              {% if is_windy %}{{ icon_wind }}{% endif %}
-              {% if is_heavy %}{{ icon_rain }}{% elsif is_drizzle %}{{ icon_drizzle }}{% endif %}
-              {% if is_fog %}{{ icon_fog }}{% endif %}
-              {% if is_ice %}{{ icon_ice }}{% endif %}
-              {% if is_uv %}{{ icon_uv }}{% endif %}
-            </div>
+            {% if is_windy %}{{ icon_wind }}{% endif %}
+            {% if is_heavy %}{{ icon_rain }}{% elsif is_drizzle %}{{ icon_drizzle }}{% endif %}
+            {% if is_fog %}{{ icon_fog }}{% endif %}
+            {% if is_ice %}{{ icon_ice }}{% endif %}
+            {% if is_uv %}{{ icon_uv }}{% endif %}
           </div>
           <span class="label label--small text--gray-30 mt--2">Light {{ sunrise_t }} to {{ sunset_t }}</span>
           <span class="label label--small text--gray-30">{{ now_wind | round }} km/h &middot; {{ now_precip }} mm{% if now_uv %} &middot; UV {{ now_uv | round }}{% endif %}</span>
@@ -286,7 +264,25 @@
         <span class="label label--small text--gray-30">No forecast. Kit shown is the default.</span>
       {% endif %}
     </div>
+  </div>
 
+  <div class="flex flex--col gap--none">
+    {% if day.kit %}
+      <div class="border--h mb--2"></div>
+      <div class="flex flex--row gap--large flex--center-y">
+        <div class="flex flex--row gap--small flex--center-y">
+          {{ icon_shoe }}
+          {% if is_ice %}
+            <span class="title title--base">{{ plan.kit.modifiers.ice }}</span>
+          {% else %}
+            <span class="title title--base">{{ shoe.short }}</span>
+          {% endif %}
+        </div>
+        {% if day.fuel %}<div class="flex flex--row gap--small flex--center-y">{{ icon_gel }}<span class="title title--base">{{ plan.kit.modifiers.fuel }}</span></div>{% endif %}
+        {% if need_fluid %}<div class="flex flex--row gap--small flex--center-y">{{ icon_bottle }}<span class="title title--base">{{ plan.kit.modifiers.fluid }}</span></div>{% endif %}
+        {% if is_dark %}<div class="flex flex--row gap--small flex--center-y">{{ icon_hivis }}<span class="title title--base">{{ plan.kit.modifiers.dark }}</span></div>{% endif %}
+      </div>
+    {% endif %}
   </div>
 </div>
 
