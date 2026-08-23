@@ -227,19 +227,27 @@
     </div>
   </div>
 
-  {%- comment -%} Empty col--span-1 sets the left edge shared by the kit list and the gear row {%- endcomment -%}
+  {%- comment -%} Indent is padding on real content, never an empty spacer element,
+       and the shoe lives inside this column so it cannot drift from the kit list. {%- endcomment -%}
   <div class="grid">
-    <div class="col--span-1"></div>
-    <div class="col--span-7">
+    <div class="col--span-8">
       {% if day.kit %}
-        <div class="flex flex--col gap--small">
+        <div class="flex flex--col gap--small px--12">
           {% if band_label %}<span class="title title--large">{{ band_label }}</span>{% endif %}
           <span class="title title--base">{{ top_line }}</span>
           <span class="title title--base">{{ bot_line }}</span>
           <span class="title title--base">{{ acc_line }}</span>
+          <div class="flex flex--row gap--small flex--center-y pt--2">
+            {{ icon_shoe }}
+            {% if is_ice %}
+              <span class="title title--base">{{ plan.kit.modifiers.ice }}</span>
+            {% else %}
+              <span class="title title--base">{{ shoe.short }}</span>
+            {% endif %}
+          </div>
         </div>
       {% elsif found %}
-        <div class="flex flex--col gap--small">
+        <div class="flex flex--col gap--small px--12">
           <span class="title title--large">Next run</span>
           <span class="title title--base">{{ next_run.date | date: "%a" }} &middot; {{ next_run.hero }}</span>
           <span class="label label--small text--gray-30">{{ next_run.at }} &middot; {{ next_run.pace }} &middot; {{ next_shoe.short }}</span>
@@ -267,37 +275,15 @@
     </div>
   </div>
 
-  {%- comment -%} Fixed columns: the shoe holds column 2 whether or not the others fire {%- endcomment -%}
+  {%- comment -%} Conditional supplies only. Same px--12 as the kit column, so the
+       left edges match without either side relying on an empty element. {%- endcomment -%}
   <div class="flex flex--col gap--none">
-    {% if day.kit %}
+    {% if day.fuel or need_fluid or is_dark %}
       <div class="border--h mb--2"></div>
-      <div class="grid">
-        <div class="col--span-1"></div>
-        <div class="col--span-4">
-          <div class="flex flex--row gap--small flex--center-y">
-            {{ icon_shoe }}
-            {% if is_ice %}
-              <span class="title title--base">{{ plan.kit.modifiers.ice }}</span>
-            {% else %}
-              <span class="title title--base">{{ shoe.short }}</span>
-            {% endif %}
-          </div>
-        </div>
-        <div class="col--span-3">
-          {% if day.fuel %}
-            <div class="flex flex--row gap--small flex--center-y">{{ icon_gel }}<span class="title title--base">{{ day.fuel_label }}</span></div>
-          {% endif %}
-        </div>
-        <div class="col--span-2">
-          {% if need_fluid %}
-            <div class="flex flex--row gap--small flex--center-y">{{ icon_bottle }}<span class="title title--base">{{ plan.kit.modifiers.fluid }}</span></div>
-          {% endif %}
-        </div>
-        <div class="col--span-2">
-          {% if is_dark %}
-            <div class="flex flex--row gap--small flex--center-y">{{ icon_hivis }}<span class="title title--base">{{ plan.kit.modifiers.dark }}</span></div>
-          {% endif %}
-        </div>
+      <div class="flex flex--row gap--large flex--center-y px--12">
+        {% if day.fuel %}<div class="flex flex--row gap--small flex--center-y">{{ icon_gel }}<span class="title title--base">{{ day.fuel_label }}</span></div>{% endif %}
+        {% if need_fluid %}<div class="flex flex--row gap--small flex--center-y">{{ icon_bottle }}<span class="title title--base">{{ plan.kit.modifiers.fluid }}</span></div>{% endif %}
+        {% if is_dark %}<div class="flex flex--row gap--small flex--center-y">{{ icon_hivis }}<span class="title title--base">{{ plan.kit.modifiers.dark }}</span></div>{% endif %}
       </div>
     {% endif %}
   </div>

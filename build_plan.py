@@ -249,7 +249,7 @@ for w in range(1, 37):
                         "mins": mins, "pace": pace_for(stype, hero),
                         "hour": h, "at": disp, "shoe": shoe(day, dow, stype)})
             if w >= 21 and mins >= 90:
-                gels = 1 + max(0, (mins - 25) // 35)
+                gels = 1 + max(0, (mins - 30) // 40)
                 rec["fuel"] = gels
                 rec["fuel_label"] = "Gel x%d" % gels
             if detail:
@@ -308,7 +308,7 @@ kit = {
     "wind":          {"top": "windproof"},
     "fog":           {"acc": "reflective vest"},
     "any_rain_long": {"acc": "anti-chafe balm"},
-    "ice":   "Trail or indoors",
+    "ice":   "Trail shoes or move indoors",
     "fluid": "Fluid",
     "dark":  "Hi-Vis"
   }
