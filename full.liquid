@@ -12,12 +12,11 @@
 {%- assign wk = plan.weeks | where: "n", day.week | first -%}
 {%- assign hr = day.hour | default: now_h -%}
 
-{%- comment -%} ---- DONE: plan.completed is a list of ISO dates, written by the Strava job ---- {%- endcomment -%}
 {%- assign is_done = false -%}
 {%- if plan.completed contains today -%}{%- assign is_done = true -%}{%- endif -%}
 
-{%- comment -%} ---- WEATHER: hourly index == hour of day when timezone is set.
-     Display and band come from the current hour. Modifiers come from the run hour. ---- {%- endcomment -%}
+{%- comment -%} ---- WEATHER. Big number and the line beneath are NOW.
+     Alert icons and all kit logic are the RUN HOUR. ---- {%- endcomment -%}
 {%- assign has_wx = false -%}
 {%- if wx.hourly.temperature_2m -%}{%- assign has_wx = true -%}{%- endif -%}
 {%- if has_wx -%}
@@ -28,17 +27,35 @@
   {%- assign run_temp = wx.hourly.temperature_2m[hr] -%}
   {%- assign run_precip = wx.hourly.precipitation[hr] -%}
   {%- assign run_wind = wx.hourly.wind_speed_10m[hr] -%}
+  {%- assign run_uv = wx.hourly.uv_index[hr] -%}
+  {%- assign run_vis = wx.hourly.visibility[hr] -%}
   {%- assign sunrise_t = wx.daily.sunrise[0] | split: "T" | last -%}
   {%- assign sunset_t = wx.daily.sunset[0] | split: "T" | last -%}
   {%- assign sunrise_h = sunrise_t | split: ":" | first | times: 1 -%}
   {%- assign sunset_h = sunset_t | split: ":" | first | times: 1 -%}
 {%- endif -%}
 
+{%- comment -%} ---- CONDITION FLAGS ---- {%- endcomment -%}
+{%- assign is_dark = false -%}
+{%- assign is_fog = false -%}
+{%- assign is_ice = false -%}
+{%- assign is_drizzle = false -%}
+{%- assign is_heavy = false -%}
+{%- assign is_windy = false -%}
+{%- assign is_uv = false -%}
+{%- if has_wx -%}
+  {%- if hr >= sunset_h or hr <= sunrise_h -%}{%- assign is_dark = true -%}{%- endif -%}
+  {%- if run_vis -%}{%- if run_vis < 1000 -%}{%- assign is_fog = true -%}{%- endif -%}{%- endif -%}
+  {%- if run_precip >= 1.5 -%}{%- assign is_heavy = true -%}
+  {%- elsif run_precip >= 0.2 -%}{%- assign is_drizzle = true -%}{%- endif -%}
+  {%- if run_wind >= 25 -%}{%- assign is_windy = true -%}{%- endif -%}
+  {%- if run_temp < 2 and run_precip > 0 -%}{%- assign is_ice = true -%}{%- endif -%}
+  {%- if run_uv -%}{%- if run_uv >= 3 -%}{%- assign is_uv = true -%}{%- endif -%}{%- endif -%}
+{%- endif -%}
+
 {%- comment -%} ---- BAND from current temperature ---- {%- endcomment -%}
 {%- assign eff = now_temp -%}
-{%- if has_wx and now_wind >= 25 -%}
-  {%- assign eff = now_temp | minus: 4 -%}
-{%- endif -%}
+{%- if has_wx and now_wind >= 25 -%}{%- assign eff = now_temp | minus: 4 -%}{%- endif -%}
 {%- assign band = "" -%}
 {%- assign band_label = "" -%}
 {%- if has_wx -%}
@@ -52,66 +69,65 @@
 {%- assign band_deltas = plan.kit.deltas | where: "band", band -%}
 {%- assign delta = band_deltas | where: "kit", day.kit | first -%}
 
-{%- comment -%} ---- MODIFIERS from the run hour ---- {%- endcomment -%}
-{%- assign mods = "" -%}
-{%- if has_wx -%}
-  {%- if hr >= sunset_h or hr <= sunrise_h -%}
-    {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.dark -%}
-  {%- endif -%}
-  {%- if run_precip >= 1.5 -%}
-    {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.heavy_rain -%}
-  {%- elsif run_precip >= 0.2 -%}
-    {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.light_rain -%}
-  {%- endif -%}
-  {%- assign base_text = delta.lines | join: " " -%}
-  {%- unless base_text contains "windproof" -%}
-    {%- if run_wind >= 25 -%}
-      {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.wind -%}
-    {%- endif -%}
-  {%- endunless -%}
-  {%- if run_precip >= 0.2 and day.km >= 15 -%}
-    {%- assign mods = mods | append: "|" | append: plan.kit.modifiers.any_rain_long -%}
-  {%- endif -%}
-{%- endif -%}
-{%- assign modlist = mods | remove_first: "|" | split: "|" -%}
-{%- assign mod_cap = plan.kit.mod_cap | default: 3 -%}
-{%- assign max_lines = plan.kit.max_lines | default: 4 -%}
-{%- assign shown_mods = modlist.size -%}
-{%- if shown_mods > mod_cap -%}{%- assign shown_mods = mod_cap -%}{%- endif -%}
-{%- assign slots = max_lines | minus: shown_mods -%}
-{%- if slots < 1 -%}{%- assign slots = 1 -%}{%- endif -%}
-
-{%- comment -%} ---- FLUID AND FUEL ---- {%- endcomment -%}
-{%- assign supply = "" -%}
-{%- if day.mins >= 75 -%}
-  {%- if band == "warm" or band == "hot" -%}
-    {%- assign supply = plan.kit.modifiers.fluid -%}
-  {%- endif -%}
-{%- endif -%}
-{%- if day.fuel -%}
-  {%- if supply == "" -%}
-    {%- assign supply = plan.kit.modifiers.fuel -%}
+{%- comment -%} ---- KIT: three slots, modifiers merge into the slot they belong to ---- {%- endcomment -%}
+{%- assign top_line = delta.top -%}
+{%- assign bot_line = delta.bottom -%}
+{%- assign acc_line = delta.acc -%}
+{%- unless delta -%}
+  {%- if day.kit == "quality" -%}
+    {%- assign top_line = plan.kit.defaults.quality.top -%}
+    {%- assign bot_line = plan.kit.defaults.quality.bottom -%}
+    {%- assign acc_line = plan.kit.defaults.quality.acc -%}
   {%- else -%}
-    {%- assign supply = supply | append: " &middot; " | append: plan.kit.modifiers.fuel -%}
+    {%- assign top_line = plan.kit.defaults.easy.top -%}
+    {%- assign bot_line = plan.kit.defaults.easy.bottom -%}
+    {%- assign acc_line = plan.kit.defaults.easy.acc -%}
+  {%- endif -%}
+{%- endunless -%}
+{%- if is_heavy -%}
+  {%- if top_line contains "windproof jacket" -%}
+    {%- assign top_line = top_line | replace: "windproof jacket", "waterproof jacket" -%}
+  {%- else -%}
+    {%- assign top_line = top_line | append: " + " | append: plan.kit.modifiers.heavy_rain.top -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if is_heavy or is_drizzle -%}
+  {%- comment -%} No cap when a beanie is already prescribed {%- endcomment -%}
+  {%- unless acc_line contains "eanie" -%}
+    {%- assign acc_line = acc_line | append: ", " | append: plan.kit.modifiers.light_rain.acc -%}
+  {%- endunless -%}
+{%- endif -%}
+{%- if is_windy -%}
+  {%- unless top_line contains "proof" -%}
+    {%- assign top_line = top_line | append: " + " | append: plan.kit.modifiers.wind.top -%}
+  {%- endunless -%}
+{%- endif -%}
+{%- if is_fog and is_dark == false -%}
+  {%- assign acc_line = acc_line | append: ", " | append: plan.kit.modifiers.fog.acc -%}
+{%- endif -%}
+{%- if is_heavy or is_drizzle -%}
+  {%- if day.km >= 15 -%}
+    {%- assign acc_line = acc_line | append: ", " | append: plan.kit.modifiers.any_rain_long.acc -%}
   {%- endif -%}
 {%- endif -%}
 
-{%- comment -%} ---- ICE ---- {%- endcomment -%}
-{%- assign ice = false -%}
-{%- if has_wx and run_temp < 2 and run_precip > 0 -%}{%- assign ice = true -%}{%- endif -%}
+{%- comment -%} ---- SUPPLY FLAGS ---- {%- endcomment -%}
+{%- assign need_fluid = false -%}
+{%- if day.mins >= 75 -%}
+  {%- if band == "warm" or band == "hot" -%}{%- assign need_fluid = true -%}{%- endif -%}
+{%- endif -%}
+
 {%- assign shoe_id = day.shoe -%}
-{%- if ice -%}{%- assign shoe_id = "parkclaw_g280" -%}{%- endif -%}
+{%- if is_ice -%}{%- assign shoe_id = "parkclaw_g280" -%}{%- endif -%}
 {%- assign shoe = plan.shoes | where: "id", shoe_id | first -%}
 
 {%- comment -%} ---- NEXT RUN ---- {%- endcomment -%}
 {%- assign seen = false -%}
 {%- assign found = false -%}
 {%- for dd in plan.days -%}
-  {%- if dd.date == today -%}
-    {%- assign seen = true -%}
+  {%- if dd.date == today -%}{%- assign seen = true -%}
   {%- elsif seen and found == false and dd.kit -%}
-    {%- assign next_run = dd -%}
-    {%- assign found = true -%}
+    {%- assign next_run = dd -%}{%- assign found = true -%}
   {%- endif -%}
 {%- endfor -%}
 {%- assign next_shoe = plan.shoes | where: "id", next_run.shoe | first -%}
@@ -128,34 +144,66 @@
   {% if is_done %}<path d="M16 31 L26 41 L45 20" stroke="black" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>{% endif %}
 </svg>
 {%- endcapture -%}
-
 {%- capture icon_wind -%}
-<svg viewBox="0 0 24 24" width="28" height="28">
+<svg viewBox="0 0 24 24" width="26" height="26">
   <rect x="2.6" y="2.4" width="2.4" height="19.2" rx="1.2" fill="black"/>
   <path d="M6.8 5.0 L21.2 8.6 L21.2 13.0 L6.8 16.6 Z" fill="black"/>
   <rect x="11.2" y="3" width="1.9" height="18" fill="white"/>
   <rect x="16.2" y="3" width="1.7" height="18" fill="white"/>
 </svg>
 {%- endcapture -%}
+{%- capture icon_drizzle -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <g fill="black"><circle cx="8" cy="9" r="3.6"/><circle cx="12.6" cy="7" r="4.6"/><circle cx="16.8" cy="9.4" r="3.2"/><rect x="8" y="9" width="8.8" height="3.4"/></g>
+  <g stroke="black" stroke-width="2" stroke-linecap="round"><path d="M9.6 16 L9.1 17.8"/><path d="M14.4 16 L13.9 17.8"/></g>
+</svg>
+{%- endcapture -%}
 {%- capture icon_rain -%}
-<svg viewBox="0 0 24 24" width="28" height="28">
-  <g fill="black">
-    <circle cx="8" cy="11" r="4"/><circle cx="13" cy="8.6" r="5"/>
-    <circle cx="17.6" cy="11.4" r="3.6"/><rect x="8" y="11" width="9.6" height="4"/>
-  </g>
-  <g stroke="black" stroke-width="2" stroke-linecap="round">
-    <path d="M8 17.6 L6.9 20.8"/><path d="M12.2 17.6 L11.1 20.8"/><path d="M16.4 17.6 L15.3 20.8"/>
-  </g>
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <g fill="black"><circle cx="8" cy="9" r="3.6"/><circle cx="12.6" cy="7" r="4.6"/><circle cx="16.8" cy="9.4" r="3.2"/><rect x="8" y="9" width="8.8" height="3.4"/></g>
+  <g stroke="black" stroke-width="2.2" stroke-linecap="round"><path d="M7.8 15.4 L6.6 20.4"/><path d="M12 15.4 L10.8 20.4"/><path d="M16.2 15.4 L15 20.4"/></g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_fog -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <g fill="black"><circle cx="8" cy="9" r="3.6"/><circle cx="12.6" cy="7" r="4.6"/><circle cx="16.8" cy="9.4" r="3.2"/><rect x="8" y="9" width="8.8" height="3.4"/></g>
+  <g stroke="black" stroke-width="2.2" stroke-linecap="round"><path d="M4.5 16.6 H19"/><path d="M7 20.2 H21"/></g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_ice -%}
+<svg viewBox="0 0 24 24" width="26" height="26" stroke="black" stroke-width="2.1" stroke-linecap="round" fill="none">
+  <path d="M12 2.2 V21.8"/><path d="M3.5 7 L20.5 17"/><path d="M20.5 7 L3.5 17"/>
+  <path d="M8.6 4.4 L12 6.4 L15.4 4.4"/><path d="M8.6 19.6 L12 17.6 L15.4 19.6"/>
 </svg>
 {%- endcapture -%}
 {%- capture icon_uv -%}
-<svg viewBox="0 0 24 24" width="28" height="28">
+<svg viewBox="0 0 24 24" width="26" height="26">
   <circle cx="12" cy="12" r="5" fill="black"/>
   <g stroke="black" stroke-width="2" stroke-linecap="round">
     <path d="M12 4.4 V1.6"/><path d="M12 19.6 V22.4"/><path d="M19.6 12 H22.4"/><path d="M4.4 12 H1.6"/>
     <path d="M17.4 6.6 L19.4 4.6"/><path d="M6.6 17.4 L4.6 19.4"/>
     <path d="M17.4 17.4 L19.4 19.4"/><path d="M6.6 6.6 L4.6 4.6"/>
   </g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_gel -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <path d="M2.6 8.2 h15.2 l1.6 1.4 -1.6 1.4 1.6 1.4 -1.6 1.4 1.6 1.4 -1.6 1.4 H2.6 z" fill="black"/>
+  <g fill="white"><rect x="5.4" y="9.6" width="1.8" height="5.4"/><rect x="9.2" y="9.6" width="1.8" height="5.4"/></g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_bottle -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <rect x="9.5" y="1.8" width="5" height="3" rx="0.8" fill="black"/>
+  <path d="M8 7.5 a4 4 0 0 1 8 0 v11.5 a2.5 2.5 0 0 1 -2.5 2.5 h-3 a2.5 2.5 0 0 1 -2.5 -2.5 z" fill="black"/>
+  <rect x="8" y="11" width="8" height="1.6" fill="white"/>
+  <rect x="8" y="14.6" width="8" height="1.6" fill="white"/>
+</svg>
+{%- endcapture -%}
+{%- capture icon_hivis -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <path d="M6 5.4 L9.6 3.2 L12 6.6 L14.4 3.2 L18 5.4 V21 H6 Z" fill="black"/>
+  <g fill="white"><rect x="6" y="10.6" width="12" height="1.9"/><rect x="6" y="15" width="12" height="1.9"/></g>
 </svg>
 {%- endcapture -%}
 
@@ -196,29 +244,24 @@
       {% if day.kit %}
         <div class="flex flex--col gap--none">
           {% if band_label %}<span class="title title--large">{{ band_label }}</span>{% endif %}
-          {% if delta %}
-            {% for line in delta.lines limit: slots %}
-              <span class="title title--small">{{ line }}</span>
-            {% endfor %}
-          {% else %}
-            <span class="title title--small">
-              {% if day.kit == "quality" %}{{ plan.kit.defaults.quality }}{% else %}{{ plan.kit.defaults.easy }}{% endif %}
-            </span>
-          {% endif %}
-          {% for m in modlist limit: mod_cap %}
-            <span class="title title--small">{{ m }}</span>
-          {% endfor %}
-          {% if supply != "" %}
-            <span class="title title--small text--bold pt--1">{{ supply }}</span>
-          {% endif %}
+          <span class="title title--small">{{ top_line }}</span>
+          <span class="title title--small">{{ bot_line }}</span>
+          <span class="title title--small">{{ acc_line }}</span>
           <div class="flex flex--row gap--small flex--center-y pt--2">
             {{ icon_shoe }}
-            {% if ice %}
+            {% if is_ice %}
               <span class="title title--small">{{ plan.kit.modifiers.ice }}</span>
             {% else %}
               <span class="title title--small">{{ shoe.short }}</span>
             {% endif %}
           </div>
+          {% if day.fuel or need_fluid or is_dark %}
+            <div class="flex flex--row gap--medium flex--center-y pt--1">
+              {% if day.fuel %}<div class="flex flex--row gap--small flex--center-y">{{ icon_gel }}<span class="label label--small">{{ plan.kit.modifiers.fuel }}</span></div>{% endif %}
+              {% if need_fluid %}<div class="flex flex--row gap--small flex--center-y">{{ icon_bottle }}<span class="label label--small">{{ plan.kit.modifiers.fluid }}</span></div>{% endif %}
+              {% if is_dark %}<div class="flex flex--row gap--small flex--center-y">{{ icon_hivis }}<span class="label label--small">{{ plan.kit.modifiers.dark }}</span></div>{% endif %}
+            </div>
+          {% endif %}
         </div>
       {% elsif found %}
         <div class="flex flex--col gap--none">
@@ -239,10 +282,12 @@
           <span class="label label--small text--uppercase text--gray-30">{{ now_hhmm }}</span>
           <div class="flex flex--row gap--small flex--center-y">
             <span class="value value--xxlarge value--tnums">{{ now_temp | round }}&deg;</span>
-            <div class="flex flex--row gap--small flex--center-y">
-              {% if now_wind >= 25 %}{{ icon_wind }}{% endif %}
-              {% if now_precip >= 1.5 %}{{ icon_rain }}{% endif %}
-              {% if now_uv %}{% if now_uv >= 3 %}{{ icon_uv }}{% endif %}{% endif %}
+            <div class="flex flex--row gap--small flex--center-y flex--wrap">
+              {% if is_windy %}{{ icon_wind }}{% endif %}
+              {% if is_heavy %}{{ icon_rain }}{% elsif is_drizzle %}{{ icon_drizzle }}{% endif %}
+              {% if is_fog %}{{ icon_fog }}{% endif %}
+              {% if is_ice %}{{ icon_ice }}{% endif %}
+              {% if is_uv %}{{ icon_uv }}{% endif %}
             </div>
           </div>
           <span class="label label--small text--gray-30 mt--2">Light {{ sunrise_t }} to {{ sunset_t }}</span>

@@ -274,41 +274,42 @@ for w in range(1, 37):
                   "runs": runs, "strength": strength, "spin": spin, "demand": demand})
 
 kit = {
-  "defaults": {"easy": "Tee, 2-in-1 shorts, cushioned socks",
-               "quality": "Tee, half tights, everyday socks"},
+  "defaults": {
+    "easy":    {"top": "Tee", "bottom": "2-in-1 shorts", "acc": "Cushioned socks"},
+    "quality": {"top": "Tee", "bottom": "Half tights",   "acc": "Everyday socks"}
+  },
   "bands": [
-    {"id": "raw",       "max": 2,   "label": "Raw"},
-    {"id": "cold",      "max": 6,   "label": "Cold"},
-    {"id": "damp_cold", "max": 10,  "label": "Damp cold"},
-    {"id": "mild",      "max": 15,  "label": "Mild"},
-    {"id": "warm",      "max": 20,  "label": "Warm"},
-    {"id": "hot",       "max": 99,  "label": "Hot"}
+    {"id": "raw",       "max": 2,  "label": "Raw"},
+    {"id": "cold",      "max": 6,  "label": "Cold"},
+    {"id": "damp_cold", "max": 10, "label": "Damp cold"},
+    {"id": "mild",      "max": 15, "label": "Mild"},
+    {"id": "warm",      "max": 20, "label": "Warm"},
+    {"id": "hot",       "max": 99, "label": "Hot"}
   ],
   "deltas": [
-    {"band":"raw","kit":"easy","lines":["+ thermal base, windproof jacket, thermal tights","+ beanie, buff, thermal gloves, warm socks"]},
-    {"band":"raw","kit":"quality","lines":["+ thermal base, gilet. Swap to full tights","+ headband, buff, thermal gloves"]},
-    {"band":"cold","kit":"easy","lines":["+ long-sleeve, windproof jacket, full tights","+ beanie or headband, light gloves, warm socks"]},
-    {"band":"cold","kit":"quality","lines":["+ long-sleeve base. Swap to full tights","+ headband, light gloves"]},
-    {"band":"damp_cold","kit":"easy","lines":["Swap tee for long-sleeve, shorts for full tights","+ light gloves"]},
-    {"band":"damp_cold","kit":"quality","lines":["+ light gloves, headband. Keep short sleeves","Underdress. It comes right by rep three"]},
-    {"band":"mild","kit":"easy","lines":["Default kit. No changes"]},
-    {"band":"mild","kit":"quality","lines":["Default kit. No changes"]},
-    {"band":"warm","kit":"easy","lines":["+ cap, sunglasses"]},
-    {"band":"warm","kit":"quality","lines":["Mesh tee. + cap, sunglasses"]},
-    {"band":"hot","kit":"easy","lines":["Mesh tee. + cap, sunglasses","Anti-chafe balm"]},
-    {"band":"hot","kit":"quality","lines":["Mesh tee. Swap tights for 2-in-1 shorts","Anti-chafe balm. Rehearse race-day heat"]}
+    {"band":"raw","kit":"easy","top":"Thermal base + windproof jacket","bottom":"Thermal tights","acc":"Beanie, buff, thermal gloves, warm socks"},
+    {"band":"raw","kit":"quality","top":"Thermal base + gilet","bottom":"Full tights","acc":"Headband, buff, thermal gloves"},
+    {"band":"cold","kit":"easy","top":"Long-sleeve + windproof jacket","bottom":"Full tights","acc":"Beanie or headband, light gloves, warm socks"},
+    {"band":"cold","kit":"quality","top":"Long-sleeve base","bottom":"Full tights","acc":"Headband, light gloves"},
+    {"band":"damp_cold","kit":"easy","top":"Long-sleeve","bottom":"Full tights","acc":"Light gloves"},
+    {"band":"damp_cold","kit":"quality","top":"Tee, deliberately underdressed","bottom":"Half tights","acc":"Light gloves, headband"},
+    {"band":"mild","kit":"easy","top":"Tee","bottom":"2-in-1 shorts","acc":"Cushioned socks"},
+    {"band":"mild","kit":"quality","top":"Tee","bottom":"Half tights","acc":"Everyday socks"},
+    {"band":"warm","kit":"easy","top":"Tee","bottom":"2-in-1 shorts","acc":"Cap, sunglasses"},
+    {"band":"warm","kit":"quality","top":"Mesh tee","bottom":"Half tights","acc":"Cap, sunglasses"},
+    {"band":"hot","kit":"easy","top":"Mesh tee","bottom":"2-in-1 shorts","acc":"Cap, sunglasses, anti-chafe balm"},
+    {"band":"hot","kit":"quality","top":"Mesh tee","bottom":"2-in-1 shorts","acc":"Cap, sunglasses, anti-chafe balm"}
   ],
-  "max_lines": 4,
-  "mod_cap": 3,
   "modifiers": {
-    "light_rain": "+ cap",
-    "heavy_rain": "+ cap, waterproof jacket",
-    "any_rain_long": "+ anti-chafe balm",
-    "wind": "+ windproof",
-    "dark": "+ headtorch, reflective vest",
-    "ice": "Trail shoes or move indoors",
+    "light_rain":    {"acc": "cap"},
+    "heavy_rain":    {"top": "waterproof jacket", "acc": "cap"},
+    "wind":          {"top": "windproof"},
+    "fog":           {"acc": "reflective vest"},
+    "any_rain_long": {"acc": "anti-chafe balm"},
+    "ice":   "Trail shoes or move indoors",
     "fluid": "Carry fluid",
-    "fuel": "Gels: 1 every 30 min"
+    "fuel":  "Gel every 30 min",
+    "dark":  "Headtorch + hi-vis"
   }
 }
 
