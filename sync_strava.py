@@ -88,7 +88,12 @@ def summarise(act, planned):
         entry["detail"] = "  ·  ".join(b for b in bits if b)
     elif kind == "ride":
         entry["headline"] = f"Spin {hms(moving)}"
-        entry["detail"] = zone_for(hr) if hr else ""
+        bits = []
+        if hr:
+            if PUBLISH_HR:
+                bits.append(f"{int(hr)} bpm")
+            bits.append(zone_for(hr))
+        entry["detail"] = "  ·  ".join(bits)
     elif kind == "strength":
         entry["headline"] = f"Strength {hms(moving)}"
         entry["detail"] = act.get("name", "")
@@ -102,12 +107,14 @@ def summarise(act, planned):
         entry["verdict"] = f"Unplanned {kind}. {planned.get('hero','')} still owed."
     elif kind == "run" and cap and hr:
         over = int(round(hr - cap))
-        if over <= 0:
-            entry["verdict"] = "Held under the cap. Exactly right."
+        if over < 0:
+            entry["verdict"] = f"{-over} bpm under the {cap} cap."
+        elif over == 0:
+            entry["verdict"] = f"Bang on the {cap} cap."
         elif over <= 8:
-            entry["verdict"] = f"{over} bpm over the cap. Close enough."
+            entry["verdict"] = f"{over} bpm over the {cap} cap."
         else:
-            entry["verdict"] = f"{over} bpm over the cap. Too hard for an easy day."
+            entry["verdict"] = f"{over} bpm over the {cap} cap. Too hard."
     elif kind == "run" and cap and not hr:
         entry["verdict"] = "No heart rate recorded."
     elif planned:

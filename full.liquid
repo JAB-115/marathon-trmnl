@@ -240,7 +240,7 @@
         <div class="flex flex--col gap--small px--12">
           <span class="title title--large">Done</span>
           <span class="title title--base">{{ act.headline }}</span>
-          {% if act.detail != "" %}<span class="title title--base">{{ act.detail }}</span>{% endif %}
+          {% unless act.detail == blank %}<span class="title title--base">{{ act.detail }}</span>{% endunless %}
           <span class="title title--base text--bold">{{ act.verdict }}</span>
         </div>
       {% elsif day.kit %}
