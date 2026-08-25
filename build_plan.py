@@ -220,6 +220,15 @@ def pace_for(stype, hero):
 MINS_PER_KM = {"easy": 7.6, "long": 7.4, "quality": 6.6, "optional": 7.8, "race": 5.7}
 
 
+def hr_cap_for(stype, hero):
+    """Cap the Strava sync compares against. None = no cap (quality/race)."""
+    h = hero.lower()
+    if "recovery" in h or "shakeout" in h: return 150
+    if stype == "long":  return 162
+    if stype in ("easy", "optional"): return 160
+    return None
+
+
 def phase_for(day):
     for p in PHASES:
         if d(p["start"]) <= day <= d(p["end"]):
@@ -247,6 +256,7 @@ for w in range(1, 37):
             mins = int(round(km * MINS_PER_KM.get(stype, 7.4)))
             rec.update({"type": stype, "kit": kit, "hero": hero, "km": km,
                         "mins": mins, "pace": pace_for(stype, hero),
+                        "hr_cap": hr_cap_for(stype, hero),
                         "hour": h, "at": disp, "shoe": shoe(day, dow, stype)})
             if w >= 21 and mins >= 90:
                 gels = 1 + max(0, (mins - 30) // 40)

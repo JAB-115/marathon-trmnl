@@ -12,8 +12,13 @@
 {%- assign wk = plan.weeks | where: "n", day.week | first -%}
 {%- assign hr = day.hour | default: now_h -%}
 
+{%- comment -%} ---- DONE: IDX_2 is the Strava feed. Falls back to plan.completed
+     so the screen still works before the sync exists. ---- {%- endcomment -%}
+{%- assign strava = IDX_2 -%}
+{%- assign act = strava.activities | where: "date", today | first -%}
 {%- assign is_done = false -%}
-{%- if plan.completed contains today -%}{%- assign is_done = true -%}{%- endif -%}
+{%- if act -%}{%- assign is_done = true -%}
+{%- elsif plan.completed contains today -%}{%- assign is_done = true -%}{%- endif -%}
 
 {%- comment -%} ---- WEATHER. Big number and the line beneath are NOW.
      Alert icons and all kit logic are the RUN HOUR. ---- {%- endcomment -%}
@@ -231,7 +236,14 @@
        and the shoe lives inside this column so it cannot drift from the kit list. {%- endcomment -%}
   <div class="grid">
     <div class="col--span-8">
-      {% if day.kit %}
+      {% if act %}
+        <div class="flex flex--col gap--small px--12">
+          <span class="title title--large">Done</span>
+          <span class="title title--base">{{ act.headline }}</span>
+          {% if act.detail != "" %}<span class="title title--base">{{ act.detail }}</span>{% endif %}
+          <span class="title title--base text--bold">{{ act.verdict }}</span>
+        </div>
+      {% elsif day.kit %}
         <div class="flex flex--col gap--small px--12">
           {% if band_label %}<span class="title title--large">{{ band_label }}</span>{% endif %}
           <span class="title title--base">{{ top_line }}</span>
@@ -278,14 +290,14 @@
   {%- comment -%} Conditional supplies only. Same px--12 as the kit column, so the
        left edges match without either side relying on an empty element. {%- endcomment -%}
   <div class="flex flex--col gap--none">
-    {% if day.fuel or need_fluid or is_dark %}
+    {% unless act %}{% if day.fuel or need_fluid or is_dark %}
       <div class="border--h mb--2"></div>
       <div class="flex flex--row gap--large flex--center-y px--12">
         {% if day.fuel %}<div class="flex flex--row gap--small flex--center-y">{{ icon_gel }}<span class="title title--base">{{ day.fuel_label }}</span></div>{% endif %}
         {% if need_fluid %}<div class="flex flex--row gap--small flex--center-y">{{ icon_bottle }}<span class="title title--base">{{ plan.kit.modifiers.fluid }}</span></div>{% endif %}
         {% if is_dark %}<div class="flex flex--row gap--small flex--center-y">{{ icon_hivis }}<span class="title title--base">{{ plan.kit.modifiers.dark }}</span></div>{% endif %}
       </div>
-    {% endif %}
+    {% endif %}{% endunless %}
   </div>
 </div>
 
