@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 # Publish raw bpm to a public repo? The verdict already conveys the judgement
 # without exposing a health metric, so this is off by default.
-PUBLISH_HR = False
+PUBLISH_HR = True
 
 LOOKBACK_DAYS = 21
 PLAN_FILE = "today.json"
