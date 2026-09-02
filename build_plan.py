@@ -25,17 +25,12 @@ PHASES = [
     {"id": "marathon", "name": "Marathon block", "start": "2027-01-04", "end": "2027-04-25", "weeks": [21, 36]},
 ]
 
-# week -> (runs, strength, spin, demand string)
-DEMAND = {}
-for w in range(1, 37):
-    if w in (2, 3, 5, 11, 12, 19):  DEMAND[w] = (2, 1, 0, "2 runs")
-    elif w == 4:                    DEMAND[w] = (0, 0, 0, "holiday, walk lots")
-    elif w <= 6:                    DEMAND[w] = (3, 1, 1, "3 runs + 1 strength")
-    elif w <= 12:                   DEMAND[w] = (3, 2, 1, "3 runs + 2 strength")
-    elif w <= 20:                   DEMAND[w] = (3, 2, 1, "3 runs + 2 strength")
-    elif w <= 33:                   DEMAND[w] = (4, 2, 1, "4 runs + 2 strength")
-    else:                           DEMAND[w] = (4, 1, 1, "4 runs + 1 strength")
-DEMAND[36] = (4, 0, 0, "taper, then race")
+# Footer prose overrides only. Session counts are NOT declared here any more:
+# they are derived from the emitted days further down, so they cannot drift.
+DEMAND_PROSE = {
+    4:  "holiday, walk lots",
+    36: "taper, then race",
+}
 
 # Sessions: week -> list of (weekday 0=Mon, type, kit_class, hero, detail, km)
 # type: easy | quality | long | race | strength | spin | rest | optional
@@ -278,12 +273,33 @@ for w in range(1, 37):
         rec["cpd"] = cp_days
         days.append(rec)
 
+RUN_TYPES = ("easy", "long", "quality", "race", "optional")
+
+def demand_string(w, runs, strength):
+    """Prose for the footer fallback. Special-cased weeks keep their own wording;
+    everything else is generated from the counts so it cannot contradict them."""
+    if w in DEMAND_PROSE:
+        return DEMAND_PROSE[w]
+    if runs == 0 and strength == 0:
+        return "rest week"
+    s = "%d run%s" % (runs, "" if runs == 1 else "s")
+    if strength:
+        s += " + %d strength" % strength
+    return s
+
 weeks = []
 for w in range(1, 37):
     monday = W1 + dt.timedelta(days=(w - 1) * 7)
-    runs, strength, spin, demand = DEMAND[w]
+    wd = [d for d in days if d["week"] == w]
+    # Counts are DERIVED from the sessions actually emitted above. The old DEMAND
+    # table asserted them separately and had drifted on 30 of 36 weeks, which would
+    # have made the "run N of M" footer print things like "run 3 of 2".
+    runs     = sum(1 for d in wd if d["type"] in RUN_TYPES)
+    strength = sum(1 for d in wd if d["type"] == "strength")
+    spin     = sum(1 for d in wd if d["type"] == "spin")
     weeks.append({"n": w, "start": monday.isoformat(), "phase": phase_for(monday),
-                  "runs": runs, "strength": strength, "spin": spin, "demand": demand})
+                  "runs": runs, "strength": strength, "spin": spin,
+                  "demand": demand_string(w, runs, strength)})
 
 kit = {
   "defaults": {

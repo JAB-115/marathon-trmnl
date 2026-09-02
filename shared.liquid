@@ -1,0 +1,208 @@
+{%- comment -%} ---- CLOCK ---- {%- endcomment -%}
+{%- assign local = trmnl.system.timestamp_utc | plus: trmnl.user.utc_offset -%}
+{%- assign today = local | date: "%Y-%m-%d" -%}
+{%- assign now_h = local | date: "%H" | times: 1 -%}
+{%- assign now_hhmm = local | date: "%H:%M" -%}
+
+{%- comment -%} ---- SOURCES: IDX_0 = plan, IDX_1 = Open-Meteo. Order is frozen. ---- {%- endcomment -%}
+{%- assign plan = IDX_0 -%}
+{%- assign wx = IDX_1 -%}
+
+{%- assign day = plan.days | where: "date", today | first -%}
+{%- assign wk = plan.weeks | where: "n", day.week | first -%}
+{%- assign hr = day.hour | default: now_h -%}
+
+{%- comment -%} ---- DONE: IDX_2 is the Strava feed. Falls back to plan.completed
+     so the screen still works before the sync exists. ---- {%- endcomment -%}
+{%- assign strava = IDX_2 -%}
+{%- assign act = strava.activities | where: "date", today | first -%}
+{%- assign is_done = false -%}
+{%- if act -%}{%- assign is_done = true -%}
+{%- elsif plan.completed contains today -%}{%- assign is_done = true -%}{%- endif -%}
+
+{%- comment -%} ---- WEATHER. Big number and the line beneath are NOW.
+     Alert icons and all kit logic are the RUN HOUR. ---- {%- endcomment -%}
+{%- assign has_wx = false -%}
+{%- if wx.hourly.temperature_2m -%}{%- assign has_wx = true -%}{%- endif -%}
+{%- if has_wx -%}
+  {%- assign now_temp = wx.hourly.temperature_2m[now_h] -%}
+  {%- assign now_wind = wx.hourly.wind_speed_10m[now_h] -%}
+  {%- assign now_precip = wx.hourly.precipitation[now_h] -%}
+  {%- assign now_uv = wx.hourly.uv_index[now_h] -%}
+  {%- assign run_temp = wx.hourly.temperature_2m[hr] -%}
+  {%- assign run_precip = wx.hourly.precipitation[hr] -%}
+  {%- assign run_wind = wx.hourly.wind_speed_10m[hr] -%}
+  {%- assign run_uv = wx.hourly.uv_index[hr] -%}
+  {%- assign run_vis = wx.hourly.visibility[hr] -%}
+  {%- assign sunrise_t = wx.daily.sunrise[0] | split: "T" | last -%}
+  {%- assign sunset_t = wx.daily.sunset[0] | split: "T" | last -%}
+  {%- assign sunrise_h = sunrise_t | split: ":" | first | times: 1 -%}
+  {%- assign sunset_h = sunset_t | split: ":" | first | times: 1 -%}
+{%- endif -%}
+
+{%- comment -%} ---- CONDITION FLAGS ---- {%- endcomment -%}
+{%- assign is_dark = false -%}
+{%- assign is_fog = false -%}
+{%- assign is_ice = false -%}
+{%- assign is_drizzle = false -%}
+{%- assign is_heavy = false -%}
+{%- assign is_windy = false -%}
+{%- assign is_uv = false -%}
+{%- if has_wx -%}
+  {%- if hr >= sunset_h or hr <= sunrise_h -%}{%- assign is_dark = true -%}{%- endif -%}
+  {%- if run_vis -%}{%- if run_vis < 1000 -%}{%- assign is_fog = true -%}{%- endif -%}{%- endif -%}
+  {%- if run_precip >= 1.5 -%}{%- assign is_heavy = true -%}
+  {%- elsif run_precip >= 0.2 -%}{%- assign is_drizzle = true -%}{%- endif -%}
+  {%- if run_wind >= 25 -%}{%- assign is_windy = true -%}{%- endif -%}
+  {%- if run_temp < 2 and run_precip > 0 -%}{%- assign is_ice = true -%}{%- endif -%}
+  {%- if run_uv -%}{%- if run_uv >= 3 -%}{%- assign is_uv = true -%}{%- endif -%}{%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ---- BAND from current temperature ---- {%- endcomment -%}
+{%- assign eff = now_temp -%}
+{%- if has_wx and now_wind >= 25 -%}{%- assign eff = now_temp | minus: 4 -%}{%- endif -%}
+{%- assign band = "" -%}
+{%- assign band_label = "" -%}
+{%- if has_wx -%}
+  {%- for b in plan.kit.bands -%}
+    {%- if band == "" and eff <= b.max -%}
+      {%- assign band = b.id -%}
+      {%- assign band_label = b.label -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- assign band_deltas = plan.kit.deltas | where: "band", band -%}
+{%- assign delta = band_deltas | where: "kit", day.kit | first -%}
+
+{%- comment -%} ---- KIT: three slots, modifiers merge into the slot they belong to ---- {%- endcomment -%}
+{%- assign top_line = delta.top -%}
+{%- assign bot_line = delta.bottom -%}
+{%- assign acc_line = delta.acc -%}
+{%- unless delta -%}
+  {%- if day.kit == "quality" -%}
+    {%- assign top_line = plan.kit.defaults.quality.top -%}
+    {%- assign bot_line = plan.kit.defaults.quality.bottom -%}
+    {%- assign acc_line = plan.kit.defaults.quality.acc -%}
+  {%- else -%}
+    {%- assign top_line = plan.kit.defaults.easy.top -%}
+    {%- assign bot_line = plan.kit.defaults.easy.bottom -%}
+    {%- assign acc_line = plan.kit.defaults.easy.acc -%}
+  {%- endif -%}
+{%- endunless -%}
+{%- if is_heavy -%}
+  {%- if top_line contains "windproof jacket" -%}
+    {%- assign top_line = top_line | replace: "windproof jacket", "waterproof jacket" -%}
+  {%- else -%}
+    {%- assign top_line = top_line | append: " + " | append: plan.kit.modifiers.heavy_rain.top -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if is_heavy or is_drizzle -%}
+  {%- comment -%} No cap when a beanie is already prescribed {%- endcomment -%}
+  {%- unless acc_line contains "eanie" -%}
+    {%- assign acc_line = acc_line | append: ", " | append: plan.kit.modifiers.light_rain.acc -%}
+  {%- endunless -%}
+{%- endif -%}
+{%- if is_windy -%}
+  {%- unless top_line contains "proof" -%}
+    {%- assign top_line = top_line | append: " + " | append: plan.kit.modifiers.wind.top -%}
+  {%- endunless -%}
+{%- endif -%}
+{%- if is_fog and is_dark == false -%}
+  {%- assign acc_line = acc_line | append: ", " | append: plan.kit.modifiers.fog.acc -%}
+{%- endif -%}
+{%- if is_heavy or is_drizzle -%}
+  {%- if day.km >= 15 -%}
+    {%- assign acc_line = acc_line | append: ", " | append: plan.kit.modifiers.any_rain_long.acc -%}
+  {%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ---- SUPPLY FLAGS ---- {%- endcomment -%}
+{%- assign need_fluid = false -%}
+{%- if day.mins >= 75 -%}
+  {%- if band == "warm" or band == "hot" -%}{%- assign need_fluid = true -%}{%- endif -%}
+{%- endif -%}
+
+{%- assign shoe_id = day.shoe -%}
+{%- if is_ice -%}{%- assign shoe_id = "parkclaw_g280" -%}{%- endif -%}
+{%- assign shoe = plan.shoes | where: "id", shoe_id | first -%}
+
+{%- comment -%} ---- NEXT RUN ---- {%- endcomment -%}
+{%- assign seen = false -%}
+{%- assign found = false -%}
+{%- for dd in plan.days -%}
+  {%- if dd.date == today -%}{%- assign seen = true -%}
+  {%- elsif seen and found == false and dd.kit -%}
+    {%- assign next_run = dd -%}{%- assign found = true -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign next_shoe = plan.shoes | where: "id", next_run.shoe | first -%}
+
+{%- capture icon_run -%}
+<img class="image" width="34" height="33" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAhAQAAAACUqETBAAAAjklEQVR42gXBsVECURgGwH0fDBI4gg3IlWFgAB3YCw2Q2YplvLERTyMCA8bonLm5391W/t5OYeri2yg+ES6D6O+0avfnk3pYVU+1hSy7Ip4cmZ85WiakTRvi1i5HNe6qx7gnhoEwEq9X4mcm9buw9njGfGjVMx82ZFq25PayJy4D+Vp38rGCu6rq2UL28A/kGTLVTjnfvQAAAABJRU5ErkJggg==" />
+{%- endcapture -%}
+{%- capture icon_shoe -%}
+<img class="image" width="46" height="44" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAsAQAAAAAyCreRAAAAvElEQVR42iXQsVHDQBAAwP3jBxR4xipBJMR0YDdAM1TwVEBLKoESPiBHkKDxvH0EFLDJyj0zR9gbwgah+yTQCasV6fSQI5J73By/c0Tx846tFTliW7MRfVEIH16a0L0SdlaxDI8rW3g6jZiKSxf11mZqpP51jWIts9D6L+G8DcKy5y7M9boL08Uk1GEIkW5CyUbQ1hSlnhdn7vqzg8xtVoNpR+aoBJHYHEtTj+ktd5nZVJnZ/wv+nYmSKIc/aXNY2QLToSIAAAAASUVORK5CYII=" />
+{%- endcapture -%}
+{%- capture tick_empty -%}
+<svg viewBox="0 0 60 60" width="60" height="60" fill="none">
+<rect x="3" y="3" width="54" height="54" rx="12" stroke="black" stroke-width="3"/>
+</svg>
+{%- endcapture -%}
+{%- capture tick_done -%}
+<svg viewBox="0 0 60 60" width="60" height="60" fill="none">
+<rect x="3" y="3" width="54" height="54" rx="12" stroke="black" stroke-width="3"/>
+<path d="M16 31 L26 41 L45 20" stroke="black" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+{%- endcapture -%}
+{%- capture icon_wind -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <rect x="2.6" y="2.4" width="2.4" height="19.2" rx="1.2" fill="black"/>
+  <path d="M6.8 5.0 L21.2 8.6 L21.2 13.0 L6.8 16.6 Z" fill="black"/>
+  <rect x="11.2" y="3" width="1.9" height="18" fill="white"/>
+  <rect x="16.2" y="3" width="1.7" height="18" fill="white"/>
+</svg>
+{%- endcapture -%}
+{%- capture icon_drizzle -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <g fill="black"><circle cx="8" cy="9" r="3.6"/><circle cx="12.6" cy="7" r="4.6"/><circle cx="16.8" cy="9.4" r="3.2"/><rect x="8" y="9" width="8.8" height="3.4"/></g>
+  <g stroke="black" stroke-width="2" stroke-linecap="round"><path d="M9.6 16 L9.1 17.8"/><path d="M14.4 16 L13.9 17.8"/></g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_rain -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <g fill="black"><circle cx="8" cy="9" r="3.6"/><circle cx="12.6" cy="7" r="4.6"/><circle cx="16.8" cy="9.4" r="3.2"/><rect x="8" y="9" width="8.8" height="3.4"/></g>
+  <g stroke="black" stroke-width="2.2" stroke-linecap="round"><path d="M7.8 15.4 L6.6 20.4"/><path d="M12 15.4 L10.8 20.4"/><path d="M16.2 15.4 L15 20.4"/></g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_fog -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <g fill="black"><circle cx="8" cy="9" r="3.6"/><circle cx="12.6" cy="7" r="4.6"/><circle cx="16.8" cy="9.4" r="3.2"/><rect x="8" y="9" width="8.8" height="3.4"/></g>
+  <g stroke="black" stroke-width="2.2" stroke-linecap="round"><path d="M4.5 16.6 H19"/><path d="M7 20.2 H21"/></g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_ice -%}
+<img class="image" width="23" height="26" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABcAAAAaAQAAAAB0z/rTAAAAYUlEQVR42jXGMQ6CUBRE0fuG5CfswMo1uASKvyi3RmIBiZGWkopYWgkd0WKelac65GaxgKsx1ieezbV9q6tfzbwYp6JMADizk2H9DzA8iiKI5t7rwknDrXDEirGokJPJzT/BZiTcZGidQQAAAABJRU5ErkJggg==" />
+{%- endcapture -%}
+{%- capture icon_uv -%}
+<svg viewBox="0 0 24 24" width="26" height="26">
+  <circle cx="12" cy="12" r="5" fill="black"/>
+  <g stroke="black" stroke-width="2" stroke-linecap="round">
+    <path d="M12 4.4 V1.6"/><path d="M12 19.6 V22.4"/><path d="M19.6 12 H22.4"/><path d="M4.4 12 H1.6"/>
+    <path d="M17.4 6.6 L19.4 4.6"/><path d="M6.6 17.4 L4.6 19.4"/>
+    <path d="M17.4 17.4 L19.4 19.4"/><path d="M6.6 6.6 L4.6 4.6"/>
+  </g>
+</svg>
+{%- endcapture -%}
+{%- capture icon_gel -%}
+<img class="image" width="20" height="34" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAiAQAAAAB30cQQAAAAaElEQVR42j3KsQ2DMBgF4fufLeTSI3gERmAsulgZAKFMFMQaFIzg0oogpHDESV93VCuqF4ImGPIvOFzRMaF6ZZbQa/3sBMMHRoiI9DcgClhC9gUv5J64s9sgAjO6/zcYrUjGQA+iBtIPpdIW19NjZxkAAAAASUVORK5CYII=" />
+{%- endcapture -%}
+{%- capture icon_bottle -%}
+<img class="image" width="16" height="34" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAiAQAAAAB+OmRqAAAAQElEQVR42mXLMRGAMBAAwfv7lMxgIRJQgLZgBSUvCQVAQZVh++VaXbb05FMpWHc8TEYIcSA0d1sXBLKSzs/UR7xVLglGvGXKFAAAAABJRU5ErkJggg==" />
+{%- endcapture -%}
+{%- capture icon_hivis -%}
+<svg viewBox="0 0 24 24" width="32" height="32">
+  <path d="M6 5.4 L9.6 3.2 L12 6.6 L14.4 3.2 L18 5.4 V21 H6 Z" fill="black"/>
+  <g fill="white"><rect x="6" y="10.6" width="12" height="1.9"/><rect x="6" y="15" width="12" height="1.9"/></g>
+</svg>
+{%- endcapture -%}
+
